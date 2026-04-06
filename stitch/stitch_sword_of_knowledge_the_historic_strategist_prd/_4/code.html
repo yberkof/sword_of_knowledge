@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+
+<html dir="rtl" lang="ar"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>سيف المعرفة: مستودع الأسلحة</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&amp;family=Amiri:wght@400;700&amp;family=Cormorant+Garamond:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#8B0000",
+                        "background-light": "#F4EED8",
+                        "background-dark": "#2A2626",
+                        "text-main": "#1A1818",
+                        "muted": "#B8A99A",
+                        "accent-gold": "#D4AF37",
+                        "accent-copper": "#4A7A59"
+                    },
+                    fontFamily: {
+                        "heading": ['Amiri', 'serif'],
+                        "body": ['Amiri', 'serif']
+                    },
+                    borderRadius: {
+                        "DEFAULT": "4px",
+                        "sm": "4px",
+                        "md": "8px",
+                        "lg": "12px",
+                        "xl": "16px",
+                        "full": "9999px"
+                    },
+                    boxShadow: {
+                        "heavy": "0 12px 32px rgba(42, 38, 38, 0.4)",
+                        "inner-stamp": "inset 0 2px 4px rgba(0,0,0,0.6)"
+                    },
+                    backgroundImage: {
+                        "parchment-texture": "url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22 opacity=%220.05%22/%3E%3C/svg%3E')",
+                        "wood-texture": "linear-gradient(to bottom, #4a3b2c, #3a2b1c)"
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            background-color: #F4EED8;
+            color: #1A1818;
+        }
+        .bg-parchment {
+            background-color: #F4EED8;
+            background-image: url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22 opacity=%220.08%22/%3E%3C/svg%3E');
+        }
+        .wood-shelf {
+            background: linear-gradient(to bottom, #5c4033 0%, #3e2723 100%);
+            border-bottom: 4px solid #2e1a14;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+            position: relative;
+        }
+        .wood-shelf::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            right: 0;
+            height: 10px;
+            background: #1a0f0c;
+            transform: perspective(100px) rotateX(-10deg);
+            transform-origin: top;
+        }
+        .card-border {
+            border: 2px solid #D4AF37;
+        }
+        .btn-crimson {
+            background-color: #8B0000;
+            color: #F4EED8;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.4), 0 4px 6px rgba(0,0,0,0.3);
+            transition: all 0.2s ease;
+        }
+        .btn-crimson:hover {
+            transform: scale(1.02);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.4), 0 0 8px #D4AF37;
+        }
+    </style>
+</head>
+<body class="bg-parchment min-h-screen flex flex-col font-body selection:bg-accent-gold selection:text-background-dark">
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+<div class="layout-container flex h-full grow flex-col">
+<div class="px-8 flex flex-1 justify-center py-5 w-full">
+<div class="layout-content-container flex flex-col w-full max-w-[1200px] flex-1">
+<header class="flex items-center justify-between whitespace-nowrap border-b-2 border-solid border-accent-gold bg-background-dark px-10 py-4 shadow-heavy rounded-t-md relative overflow-hidden">
+<div class="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22 opacity=%220.05%22/%3E%3C/svg%3E')] opacity-20 pointer-events-none"></div>
+<div class="flex items-center gap-4 text-background-light relative z-10">
+<div class="size-8 text-accent-gold flex items-center justify-center">
+<span class="material-symbols-outlined text-3xl" data-icon="swords" style="font-variation-settings: 'FILL' 1;">swords</span>
+</div>
+<h2 class="text-background-light text-3xl font-heading font-bold leading-tight tracking-wider uppercase drop-shadow-md">مستودع الأسلحة</h2>
+</div>
+<div class="flex items-center bg-background-light px-6 py-2 rounded border-2 border-accent-gold shadow-inner-stamp relative z-10 cursor-default" title="الرصيد الحالي">
+<span class="material-symbols-outlined text-accent-gold ml-2 text-2xl" data-icon="monetization_on" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="text-text-main text-2xl font-heading font-bold tracking-widest">1,250</span>
+</div>
+</header>
+<div class="bg-background-dark border-x-2 border-accent-gold px-10 pt-4 pb-0 relative">
+<div class="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22 opacity=%220.05%22/%3E%3C/svg%3E')] opacity-20 pointer-events-none"></div>
+<div class="flex border-b-2 border-muted gap-12 relative z-10">
+<a class="flex flex-col items-center justify-center border-b-[4px] border-b-accent-gold text-accent-gold pb-3 pt-2 px-4 transition-colors hover:text-background-light" href="#">
+<span class="material-symbols-outlined mb-1 text-xl" data-icon="build" style="font-variation-settings: 'FILL' 1;">build</span>
+<p class="font-heading text-lg font-bold uppercase tracking-wider">المساعدات</p>
+</a>
+<a class="flex flex-col items-center justify-center border-b-[4px] border-b-transparent text-muted pb-3 pt-2 px-4 transition-colors hover:text-background-light hover:border-b-muted" href="#">
+<span class="material-symbols-outlined mb-1 text-xl" data-icon="flag" style="font-variation-settings: 'FILL' 1;">flag</span>
+<p class="font-heading text-lg font-bold uppercase tracking-wider">الرايات</p>
+</a>
+<a class="flex flex-col items-center justify-center border-b-[4px] border-b-transparent text-muted pb-3 pt-2 px-4 transition-colors hover:text-background-light hover:border-b-muted" href="#">
+<span class="material-symbols-outlined mb-1 text-xl" data-icon="upgrade" style="font-variation-settings: 'FILL' 1;">upgrade</span>
+<p class="font-heading text-lg font-bold uppercase tracking-wider">الترقيات</p>
+</a>
+</div>
+</div>
+<main class="flex-1 bg-background-dark bg-opacity-95 border-x-2 border-b-2 border-accent-gold rounded-b-md p-10 relative overflow-hidden shadow-heavy">
+<div class="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22 opacity=%220.08%22/%3E%3C/svg%3E')] pointer-events-none"></div>
+<div class="flex flex-col gap-16 relative z-10">
+<!-- Shelf 1 -->
+<div class="relative pt-8">
+<div class="flex flex-wrap justify-center gap-10 px-8 pb-4 relative z-20">
+<!-- Item Card 1 -->
+<div class="w-[200px] h-[280px] bg-background-light card-border rounded shadow-heavy flex flex-col relative group overflow-hidden transition-transform duration-300 hover:-translate-y-2">
+<div class="absolute inset-0 bg-parchment opacity-50 pointer-events-none"></div>
+<div class="h-32 bg-background-dark flex items-center justify-center border-b-2 border-accent-gold relative p-2">
+<div class="absolute inset-0 bg-gradient-to-b from-transparent to-black opacity-40"></div>
+<img alt="منظار نحاسي" class="w-full h-full object-cover rounded-sm border border-muted opacity-90 group-hover:opacity-100 transition-opacity z-10" data-alt="antique brass spyglass telescope on dark moody background with dramatic lighting and ancient maps" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDPdGmbaGU4_lU55yFcrQFp8ahcIga6xnaso6yptsv0UXKlrs3M3kZw98Qcx_Be1vFR4qTwnie9BAA_lqhlavv6I5YhWea_BMB2oBhUx8jvpq3-ZVYISYx0xnM6_VU7khDja6Ibu3F345dOfrxhh8Z3yucAjEDu5ntPuFxDNdtMF_p8-TDa7eR6V_4dOgy2OSA9U3Meq0FcdTiVAb-25WOUOqxWl--i_vJJN0frsRuhtG3HyhsvUc8AHXWfD4WMPUJvEWiqnvyxJHA"/>
+</div>
+<div class="flex-1 p-3 flex flex-col justify-between relative z-10">
+<div class="text-center">
+<h3 class="font-heading text-text-main text-sm font-bold uppercase mb-1 leading-tight tracking-wide">منظار نحاسي</h3>
+<p class="font-body text-text-main text-xs italic leading-snug">يكشف عن موضوع منطقة مجاورة غير معروفة.</p>
+</div>
+<button class="btn-crimson w-full py-2 rounded font-heading text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-1 mt-2">
+<span>150</span>
+<span class="material-symbols-outlined text-accent-gold text-base" data-icon="monetization_on" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+</button>
+</div>
+</div>
+<!-- Item Card 2 -->
+<div class="w-[200px] h-[280px] bg-background-light card-border rounded shadow-heavy flex flex-col relative group overflow-hidden transition-transform duration-300 hover:-translate-y-2">
+<div class="absolute inset-0 bg-parchment opacity-50 pointer-events-none"></div>
+<div class="h-32 bg-background-dark flex items-center justify-center border-b-2 border-accent-gold relative p-2">
+<div class="absolute inset-0 bg-gradient-to-b from-transparent to-black opacity-40"></div>
+<img alt="مطرقة الحصار" class="w-full h-full object-cover rounded-sm border border-muted opacity-90 group-hover:opacity-100 transition-opacity z-10" data-alt="heavy medieval iron war hammer resting on dark wood with sparks flying in the background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD07GjdoSEFEfht51kpJjxli9xChIKj7qpXC9fmNw5OrsXjZxfYOR3Es0cDD-r6FJY0t0eAgvURESRiIfvKDMaCawg0qjYia69KZlHLDew4vxjIMzZac2bmX1yJBJbhqcAjeetl4s-WdX7t53KUBaNPw2JN9p2Xo2uDEZmMQi91x9opAZh4Dw7fQIPnxZLCP0blHE4saFz13l4AhFD4Dk5TaWVw9PU5J7Cb0-jmvrw0VT324tpcJBIKoliB9cJFXLaAF3OepH6Zxug"/>
+</div>
+<div class="flex-1 p-3 flex flex-col justify-between relative z-10">
+<div class="text-center">
+<h3 class="font-heading text-text-main text-sm font-bold uppercase mb-1 leading-tight tracking-wide">مطرقة الحصار</h3>
+<p class="font-body text-text-main text-xs italic leading-snug">تدمر جدران قلاع الأعداء، مما يقلل من دفاعهم.</p>
+</div>
+<button class="btn-crimson w-full py-2 rounded font-heading text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-1 mt-2">
+<span>300</span>
+<span class="material-symbols-outlined text-accent-gold text-base" data-icon="monetization_on" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+</button>
+</div>
+</div>
+<!-- Item Card 3 -->
+<div class="w-[200px] h-[280px] bg-background-light card-border rounded shadow-heavy flex flex-col relative group overflow-hidden transition-transform duration-300 hover:-translate-y-2">
+<div class="absolute inset-0 bg-parchment opacity-50 pointer-events-none"></div>
+<div class="h-32 bg-background-dark flex items-center justify-center border-b-2 border-accent-gold relative p-2">
+<div class="absolute inset-0 bg-gradient-to-b from-transparent to-black opacity-40"></div>
+<img alt="درع الحماية" class="w-full h-full object-cover rounded-sm border border-muted opacity-90 group-hover:opacity-100 transition-opacity z-10" data-alt="ornate ancient greek bronze hoplite shield with intricate engravings on a dark textured background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCuZR-TzWBlftsPs28z7BU6mrTSq0ElK4hwTkT9qg3f18RntAUYqwvLnHbLRdau0lxHNAJhkIyR2XIe54WaDydb-MU0tM6DRoQWo-CDJM5JJtHqbzOOgYzfxjanIkRKQ63zMfQbBCMS2fZh8BvZ8xuY-pMWgnPRfrgsNWfw-WrvgWio7Of7TtrUPqReAE_6j4UZMyk78EJ0EyYJZ3eVFk70XyT_V-cI6XjETB7zyURHblakjW8Ulos15Kjx7roZng7_qLJ9PynP5Hs"/>
+</div>
+<div class="flex-1 p-3 flex flex-col justify-between relative z-10">
+<div class="text-center">
+<h3 class="font-heading text-text-main text-sm font-bold uppercase mb-1 leading-tight tracking-wide">درع الحماية</h3>
+<p class="font-body text-text-main text-xs italic leading-snug">يمنح فرصة ثانية عند الإجابة بشكل خاطئ على سؤال.</p>
+</div>
+<button class="btn-crimson w-full py-2 rounded font-heading text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-1 mt-2">
+<span>250</span>
+<span class="material-symbols-outlined text-accent-gold text-base" data-icon="monetization_on" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+</button>
+</div>
+</div>
+</div>
+<div class="wood-shelf h-8 w-full absolute bottom-0 z-10 rounded-sm"></div>
+</div>
+</div>
+</main>
+</div>
+</div>
+</div>
+</div>
+</body></html>

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+
+<html dir="rtl" lang="ar"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>إعداد المباراة - سيف المعرفة</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@100..900&amp;family=Noto+Serif+Arabic:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ae0404",
+                        "background-light": "#f8f5f5",
+                        "background-dark": "#230f0f",
+                        "parchment": "#F4EED8",
+                        "charcoal": "#2A2626",
+                        "ink": "#1A1818",
+                        "gold": "#D4AF37",
+                        "copper": "#4A7A59",
+                        "vellum": "#B8A99A"
+                    },
+                    fontFamily: {
+                        "display": ["Noto Serif Arabic", "serif"],
+                        "body": ["Noto Kufi Arabic", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    boxShadow: {
+                        'heavy': '0 12px 32px rgba(42, 38, 38, 0.4)',
+                        'inner-stamp': 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.5)',
+                    },
+                    backgroundImage: {
+                        'parchment-texture': 'linear-gradient(to bottom right, rgba(244, 238, 216, 0.95), rgba(220, 210, 180, 0.9)), repeating-radial-gradient(circle at 0 0, transparent 0, #F4EED8 10px), repeating-linear-gradient(#e5d8b855, #e5d8b855)',
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            background-color: #F4EED8;
+            color: #1A1818;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+        }
+        
+        .mode-card {
+            border: 2px solid #D4AF37;
+            transition: all 0.3s ease;
+        }
+        
+        .mode-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(42, 38, 38, 0.2);
+        }
+        
+        .mode-card.selected {
+            border-color: #ae0404;
+            background-color: rgba(174, 4, 4, 0.05);
+            box-shadow: inset 0 0 0 1px #ae0404, 0 8px 24px rgba(174, 4, 4, 0.15);
+        }
+
+        .loadout-slot {
+            border: 2px dashed #D4AF37;
+            background-color: rgba(26, 24, 24, 0.4);
+            transition: all 0.2s ease;
+        }
+
+        .loadout-slot:hover {
+            background-color: rgba(212, 175, 55, 0.1);
+        }
+        
+        .item-inventory {
+            border: 1px solid #B8A99A;
+            background-color: #F4EED8;
+            cursor: grab;
+        }
+        
+        .item-inventory:active {
+            cursor: grabbing;
+        }
+
+        .btn-stamp {
+            box-shadow: inset 0 -3px 0 0 rgba(0,0,0,0.3), 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            letter-spacing: 0.02em;
+            transition: transform 0.1s;
+        }
+        
+        .btn-stamp:active {
+            transform: scale(0.98);
+            box-shadow: inset 0 2px 4px 0 rgba(0,0,0,0.4);
+        }
+        
+        .inventory-scroll::-webkit-scrollbar {
+            height: 6px;
+        }
+        .inventory-scroll::-webkit-scrollbar-track {
+            background: #1A1818;
+            border-radius: 4px;
+        }
+        .inventory-scroll::-webkit-scrollbar-thumb {
+            background: #D4AF37;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="font-body flex flex-col min-h-screen relative pb-[200px]">
+<!-- Simple Back Header (Back-to-Main Exception) -->
+<header class="flex items-center justify-between whitespace-nowrap border-b-2 border-vellum/50 px-10 py-4 bg-parchment/80 backdrop-blur-sm sticky top-0 z-10">
+<a class="flex items-center gap-2 text-ink hover:text-primary transition-colors group" href="#">
+<span class="material-symbols-outlined text-2xl group-hover:translate-x-1 transition-transform">arrow_forward</span>
+<span class="text-sm font-bold tracking-wider">غرفة الحرب الرئيسية</span>
+</a>
+<h1 class="text-2xl font-display font-bold tracking-tight text-ink">الاستعدادات للحرب</h1>
+<div class="w-24"></div> <!-- Spacer for centering -->
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 max-w-[1200px] mx-auto w-full px-6 py-12 flex flex-col gap-10">
+<div class="text-center mb-4">
+<h2 class="text-4xl font-display font-black text-ink mb-3 tracking-wide">اختر ساحة معركتك</h2>
+<p class="text-lg text-ink/70 max-w-2xl mx-auto italic">اختر مسرح الحرب وقواعد الاشتباك قبل نشر قواتك.</p>
+</div>
+<!-- Mode Selection Grid -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-5xl mx-auto">
+<!-- Mode 1: 1v1v1 Skirmish (Selected State) -->
+<div class="mode-card selected rounded-lg overflow-hidden cursor-pointer relative flex flex-col h-full bg-parchment group">
+<div class="absolute top-3 left-3 z-10">
+<span class="material-symbols-outlined text-primary" data-weight="fill" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<div class="h-48 w-full relative overflow-hidden border-b-2 border-primary/30">
+<img alt="رسم عتيق لثلاثة جيوش تتصادم في سهل مفتوح" class="w-full h-full object-cover mix-blend-multiply opacity-80 group-hover:scale-105 transition-transform duration-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD8BNGo6oQUj2oolFiKQbk6qgT_B6wP7k4wffqVBhA_B7yMgWeb5obk7aHzcEyi5zBzmIXh0c5Y_lH9lsKOhwpBkvLnE6Pt3cHL8_yAan7EHLCmOnDRWfHRk8_l0wE3fLJcejfD4Dx910P3NQrx7cFY6SUd7yTxCY9WwAS7esip8nNwgnO0a1j_Q_vMNUj0KKHLMWmdojdPZqxy42e21Y_379mQOdxNUb1mv1sDqxtmWppxSZvYaG7J-Hsg-pHmzFc8oOmG_uN04QQ"/>
+<div class="absolute inset-0 bg-gradient-to-t from-primary/20 to-transparent"></div>
+</div>
+<div class="p-6 flex flex-col flex-1">
+<h3 class="text-2xl font-display font-bold text-primary mb-2 tracking-tight">مناوشة 1 ضد 1 ضد 1</h3>
+<p class="text-ink text-base leading-relaxed flex-1">معركة ذكاء سريعة بين ثلاثة قادة. توسع بسرعة، دافع بحكمة، وتغلب على منافسين في آن واحد.</p>
+<div class="mt-4 flex items-center gap-2 text-sm font-bold text-primary/80">
+<span class="material-symbols-outlined text-base">hourglass_empty</span>
+<span>الوقت المقدر: 15-20 دقيقة</span>
+</div>
+</div>
+</div>
+<!-- Mode 2: Clan Wars -->
+<div class="mode-card rounded-lg overflow-hidden cursor-pointer relative flex flex-col h-full bg-parchment group">
+<div class="h-48 w-full relative overflow-hidden border-b-2 border-gold/50">
+<img alt="رسم لجيوش ضخمة مجتمعة تحت رايات عملاقة" class="w-full h-full object-cover mix-blend-multiply opacity-80 group-hover:scale-105 transition-transform duration-700 grayscale sepia" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDwydR7nTdmTnTO9rZjp6-TUXcnNfqYneggox1A3zeYHfjdft90NvyFkXtNGl7NIDiz3zDkiglD_8kreE4R4jL3qMnYTdkcxQD1k66FoGaJTwYucL3oc017ET0hy736fQ6688FERQ8wWTt0LmPzShb3EoLm8fS2XebVAR13jg53u93KBonavccXNyn8IM2N8H8yS6Nlf4_WGkvAhj4awEvS9BFJU4-nYAuTu2Wnpg6e8aCFG9omCMMISf0vRhT-mD7fkGlH5rizJWY"/>
+</div>
+<div class="p-6 flex flex-col flex-1">
+<h3 class="text-2xl font-display font-bold text-ink mb-2 tracking-tight group-hover:text-gold transition-colors">حروب القبائل</h3>
+<p class="text-ink/80 text-base leading-relaxed flex-1">وحد راياتك. انتصر ككيان واحد. نسق مع أعضاء قبيلتك في نزاعات إقليمية ضخمة 5 ضد 5.</p>
+<div class="mt-4 flex items-center gap-2 text-sm font-bold text-vellum">
+<span class="material-symbols-outlined text-base">groups</span>
+<span>تتطلب مجموعة قبيلة</span>
+</div>
+</div>
+</div>
+<!-- Mode 3: Battle Royale -->
+<div class="mode-card rounded-lg overflow-hidden cursor-pointer relative flex flex-col h-full bg-parchment group">
+<div class="h-48 w-full relative overflow-hidden border-b-2 border-gold/50">
+<img alt="خريطة دائرية مع حواف مظلمة تضيق على حصن مركزي" class="w-full h-full object-cover mix-blend-multiply opacity-80 group-hover:scale-105 transition-transform duration-700 grayscale sepia" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCzLpN0k2Z7AvvJ-SefFQQtwFROjwUv0zSancN0Qo9p80JbTcmQyCraqTsNtDE4MAZlvPhvQI8hutmI5PJtqfMXX7kgTIKiHKJzgDQU8N53j6PH-4wG8X1nxN4WuzSPEms2JEozRs_3ZOBK2YSSouOiMt4qqym7nsQ1uOCvPl8Su8J5hOAndYv8ClyQ4BazG4_u48z3X_xF2dDIzPzdKivNEzMkDj9HYSNih26h9xhqXUjgVIcnt0dzhrt-lghVv94KzrxysAVCZfc"/>
+</div>
+<div class="p-6 flex flex-col flex-1">
+<h3 class="text-2xl font-display font-bold text-ink mb-2 tracking-tight group-hover:text-gold transition-colors">المعركة الكبرى</h3>
+<p class="text-ink/80 text-base leading-relaxed flex-1">انجُ من الحدود المنهارة. يدخل 20 قائداً، ومع تقلص ضباب الحرب على الخريطة، يبقى واحد فقط.</p>
+<div class="mt-4 flex items-center gap-2 text-sm font-bold text-vellum">
+<span class="material-symbols-outlined text-base">local_fire_department</span>
+<span>مخاطر عالية</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Sticky Loadout Bar -->
+<section class="fixed bottom-0 left-0 w-full bg-charcoal border-t-4 border-gold shadow-[0_-10px_40px_rgba(0,0,0,0.5)] z-50">
+<div class="max-w-[1400px] mx-auto px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-6">
+<!-- Right: Available Inventory (Swapped for RTL) -->
+<div class="flex-1 w-full md:w-auto overflow-hidden flex flex-col gap-2 border-l-0 md:border-l border-vellum/20 pl-6">
+<h4 class="text-vellum text-sm tracking-widest font-bold">مستودع الأسلحة (اسحب للتجهيز)</h4>
+<div class="flex gap-4 overflow-x-auto pb-2 inventory-scroll items-center">
+<!-- Item 1 -->
+<div class="item-inventory flex flex-col items-center justify-center p-2 rounded w-20 h-24 flex-shrink-0 group hover:border-gold hover:bg-[#EAE2C6] transition-colors" title="مطرقة الحرب: تدمير جدران العدو">
+<span class="material-symbols-outlined text-3xl text-ink group-hover:scale-110 transition-transform">hardware</span>
+<span class="text-[10px] font-bold mt-2 uppercase text-center leading-tight">مطرقة</span>
+</div>
+<!-- Item 2 -->
+<div class="item-inventory flex flex-col items-center justify-center p-2 rounded w-20 h-24 flex-shrink-0 group hover:border-gold hover:bg-[#EAE2C6] transition-colors opacity-50 cursor-not-allowed" title="درع إيجيس (مجهز بالفعل)">
+<span class="material-symbols-outlined text-3xl text-ink">shield</span>
+<span class="text-[10px] font-bold mt-2 uppercase text-center leading-tight">درع</span>
+</div>
+<!-- Item 3 -->
+<div class="item-inventory flex flex-col items-center justify-center p-2 rounded w-20 h-24 flex-shrink-0 group hover:border-gold hover:bg-[#EAE2C6] transition-colors" title="منظار: كشف الضباب المجاور">
+<span class="material-symbols-outlined text-3xl text-ink group-hover:scale-110 transition-transform">search</span>
+<span class="text-[10px] font-bold mt-2 uppercase text-center leading-tight">منظار</span>
+</div>
+<!-- Item 4 -->
+<div class="item-inventory flex flex-col items-center justify-center p-2 rounded w-20 h-24 flex-shrink-0 group hover:border-gold hover:bg-[#EAE2C6] transition-colors" title="خنجر المخرب: سرقة الموارد">
+<span class="material-symbols-outlined text-3xl text-ink group-hover:scale-110 transition-transform">colorize</span>
+<span class="text-[10px] font-bold mt-2 uppercase text-center leading-tight">خنجر</span>
+</div>
+</div>
+</div>
+<!-- Center: Loadout Slots -->
+<div class="flex flex-col items-center gap-2">
+<h4 class="text-gold text-sm tracking-widest font-bold">العتاد التكتيكي</h4>
+<div class="flex gap-4">
+<!-- Slot 1 (Filled) -->
+<div class="w-16 h-16 rounded border-2 border-gold bg-parchment flex items-center justify-center shadow-inner-stamp relative group cursor-pointer">
+<span class="material-symbols-outlined text-3xl text-ink">shield</span>
+<div class="absolute inset-0 bg-primary/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded">
+<span class="material-symbols-outlined text-white text-xl">close</span>
+</div>
+</div>
+<!-- Slot 2 (Empty) -->
+<div class="loadout-slot w-16 h-16 rounded flex items-center justify-center relative">
+<span class="material-symbols-outlined text-3xl text-vellum/30">add</span>
+</div>
+<!-- Slot 3 (Empty) -->
+<div class="loadout-slot w-16 h-16 rounded flex items-center justify-center relative">
+<span class="material-symbols-outlined text-3xl text-vellum/30">add</span>
+</div>
+</div>
+</div>
+<!-- Left: CTA (Swapped for RTL) -->
+<div class="flex-shrink-0 pr-0 md:pr-6 border-r-0 md:border-r border-vellum/20">
+<button class="btn-stamp bg-primary text-parchment font-bold text-xl px-10 py-5 rounded flex items-center gap-3 hover:bg-[#900000] focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2 focus:ring-offset-charcoal">
+<span>إلى الحرب</span>
+<span class="material-symbols-outlined">swords</span>
+</button>
+</div>
+</div>
+</section>
+</body></html>

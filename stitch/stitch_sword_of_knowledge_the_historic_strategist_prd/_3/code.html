@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+
+<html dir="rtl" lang="ar"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>سيف المعرفة - ساحة المعركة</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,700;1,400&amp;family=Amiri:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ae0404",
+                        "background-light": "#f8f5f5",
+                        "background-dark": "#230f0f",
+                    },
+                    fontFamily: {
+                        "display": ["Amiri", "Noto Serif", "serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Amiri', serif;
+        }
+        .hex-grid {
+            display: flex;
+            flex-wrap: wrap;
+            width: 80%;
+            margin: 0 auto;
+            overflow: hidden;
+            font-family: sans-serif;
+            list-style-type: none;
+            padding-bottom: 5.5%;
+        }
+
+        .hex {
+            position: relative;
+            visibility:hidden;
+            outline:1px solid transparent; 
+            width: 9%;
+            margin: 0 0.5% 4%;
+            padding-bottom: 10.392%; 
+            transform: rotate(-60deg) skewY(30deg);
+            background: #d4af37;
+        }
+        
+        .hex * {
+            visibility:visible;
+            outline:1px solid transparent; 
+        }
+
+        .hex-inner {
+            position: absolute;
+            width:100%;
+            padding-bottom: 100%;
+            overflow: hidden;
+            transform: skewY(-30deg) rotate(60deg);
+        }
+
+        .hex-bg {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: #e5e0d8;
+            background-image: url('data:image/svg+xml;utf8,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" stitchTiles="stitch"/></filter><rect width="100" height="100" filter="url(%23noise)" opacity="0.1"/></svg>');
+            background-size: cover;
+            border: 2px solid #d4af37;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .hex-bg:hover {
+            filter: brightness(0.9);
+            border-color: #ae0404;
+            border-width: 3px;
+            z-index: 10;
+        }
+
+        /* Adjustments for RTL Grid */
+        .hex:nth-child(20n+11),
+        .hex:nth-child(20n+12),
+        .hex:nth-child(20n+13),
+        .hex:nth-child(20n+14),
+        .hex:nth-child(20n+15),
+        .hex:nth-child(20n+16),
+        .hex:nth-child(20n+17),
+        .hex:nth-child(20n+18),
+        .hex:nth-child(20n+19),
+        .hex:nth-child(20n+20) {
+            margin-top: -2.2%;
+            margin-bottom: -2.2%;
+            transform: translateX(-50%) rotate(-60deg) skewY(30deg);
+        }
+
+        .owner-red .hex-bg { background-color: rgba(174, 4, 4, 0.6); }
+        .owner-green .hex-bg { background-color: rgba(74, 122, 89, 0.6); }
+        .owner-blue .hex-bg { background-color: rgba(42, 75, 124, 0.6); }
+
+        .castle-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            color: #230f0f;
+            text-shadow: 1px 1px 0px rgba(255,255,255,0.5);
+            pointer-events: none;
+        }
+        
+        .paper-texture {
+            background-color: #f8f5f5;
+            background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><filter id="noiseFilter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noiseFilter)" opacity="0.05"/></svg>');
+        }
+    </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col bg-background-light font-display">
+<!-- Minimal Header -->
+<header class="absolute top-0 w-full flex items-center justify-between px-6 py-4 z-50 pointer-events-none">
+<button class="pointer-events-auto flex items-center justify-center w-10 h-10 rounded bg-background-dark text-background-light shadow-md hover:bg-primary transition-colors border border-[#d4af37]">
+<span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>
+</button>
+<div class="pointer-events-auto bg-background-dark text-background-light px-4 py-2 rounded border border-[#d4af37] shadow-md flex items-center gap-2">
+<span class="material-symbols-outlined text-[#d4af37]" data-icon="swords">swords</span>
+<span class="font-bold tracking-wider text-sm">مناوشة</span>
+</div>
+</header>
+<!-- Map Section (Top 70%) -->
+<main class="flex-grow relative h-[716px] paper-texture overflow-hidden flex items-center justify-center shadow-inner">
+<!-- Watermark / Background Map Hint -->
+<div class="absolute inset-0 opacity-20 bg-center bg-cover mix-blend-multiply" data-alt="faint vintage map of europe" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCQdWhy665ORLnTM46WWfKCT0sl1YAn3wjDiLKirHwMnjsOVVcM5fhZfwFlqujPWGC_EnyOJBhFZ5OV8uIRaKGykY0GwT0lA_iKtmFakfHxJv6rygv72yodvFHsBkXyHbWjlkDaiq64THKZEfQOhDSsglKJlYA2IQyIq5Jph0Z_ijq5YplMHDjy29ag4xQ0zpAcKJ4OhIx1jfKh-Kq_C4iOyc9hvLoyl91p6OQQs3rycJK444m0uq9ahR8IwvgV4WYvbprixTzRBe4')"></div>
+<!-- Hex Grid Container -->
+<div class="relative w-[150%] h-[150%] transform scale-75 md:scale-100 flex items-center justify-center">
+<ul class="hex-grid">
+<!-- Example Row 1 -->
+<li class="hex owner-red"><div class="hex-inner"><div class="hex-bg"><span class="material-symbols-outlined castle-icon" data-icon="castle">castle</span></div></div></li>
+<li class="hex owner-red"><div class="hex-inner"><div class="hex-bg"></div></div></li>
+<li class="hex"><div class="hex-inner"><div class="hex-bg"></div></div></li>
+<li class="hex"><div class="hex-inner"><div class="hex-bg"></div></div></li>
+<li class="hex owner-blue"><div class="hex-inner"><div class="hex-bg"></div></div></li>
+<li class="hex owner-blue"><div class="hex-inner"><div class="hex-bg"><span class="material-symbols-outlined castle-icon" data-icon="castle">castle</span></div></div></li>
+<li class="hex"><div class="hex-inner"><div class="hex-bg"></div></div></li>
+<li class="hex"><div class="hex-inner"><div class="hex-bg"></div></div></li>
+<li class="hex"><div class="hex-inner"><div class="hex-bg"></div></div></li>
+<li class="hex"><div class="hex-inner"><div class="hex-bg"></div></div></li>
+<!-- Example Row 2 -->
+<li class="hex owner-red"><div class="hex-inner"><div class="hex-bg"></div></div></li>
+<li class="hex"><div class="hex-inner"><div class="hex-bg"></div></div></li>
+<li class="hex"><div class="hex-inner"><div class="hex-bg"></div></div></li>
+<li class="hex"><div class="hex-inner"><div class="hex-bg"></div></div></li>
+<li class="hex owner-blue"><div class="hex-inner"><div class="hex-bg"></div></div></li>
+<li class="hex"><div class="hex-inner"><div class="hex-bg"></div></div></li>
+<li class="hex"><div class="hex-inner"><div class="hex-bg"></div></div></li>
+<li class="hex owner-green"><div class="hex-inner"><div class="hex-bg"></div></div></li>
+<li class="hex owner-green"><div class="hex-inner"><div class="hex-bg"></div></div></li>
+<li class="hex"><div class="hex-inner"><div class="hex-bg"></div></div></li>
+<!-- Example Row 3 -->
+<li class="hex"><div class="hex-inner"><div class="hex-bg"></div></div></li>
+<li class="hex border-primary border-4 scale-110 z-20"><div class="hex-inner"><div class="hex-bg" style="border-color:#ae0404; filter:brightness(1.1); box-shadow: 0 0 15px #ae0404;"><span class="material-symbols-outlined castle-icon text-white" data-icon="swords">swords</span></div></div></li>
+<li class="hex"><div class="hex-inner"><div class="hex-bg"></div></div></li>
+<li class="hex"><div class="hex-inner"><div class="hex-bg"></div></div></li>
+<li class="hex"><div class="hex-inner"><div class="hex-bg"></div></div></li>
+<li class="hex"><div class="hex-inner"><div class="hex-bg"></div></div></li>
+<li class="hex owner-green"><div class="hex-inner"><div class="hex-bg"></div></div></li>
+<li class="hex owner-green"><div class="hex-inner"><div class="hex-bg"><span class="material-symbols-outlined castle-icon" data-icon="castle">castle</span></div></div></li>
+<li class="hex owner-green"><div class="hex-inner"><div class="hex-bg"></div></div></li>
+<li class="hex"><div class="hex-inner"><div class="hex-bg"></div></div></li>
+</ul>
+</div>
+<!-- Power-up Dock (Left Side for RTL context) -->
+<div class="absolute left-6 top-1/2 -translate-y-1/2 flex flex-col gap-4 z-40">
+<button class="w-14 h-14 rounded bg-background-dark border-2 border-[#d4af37] shadow-lg flex items-center justify-center hover:bg-primary transition-colors relative group">
+<span class="material-symbols-outlined text-[#d4af37] group-hover:text-white" data-icon="hardware">hardware</span>
+<span class="absolute -bottom-1 -left-1 bg-background-light text-xs font-bold px-1 rounded border border-[#d4af37]">2</span>
+</button>
+<button class="w-14 h-14 rounded bg-background-dark border-2 border-[#d4af37] shadow-lg flex items-center justify-center hover:bg-primary transition-colors relative group">
+<span class="material-symbols-outlined text-[#d4af37] group-hover:text-white" data-icon="security">security</span>
+<span class="absolute -bottom-1 -left-1 bg-background-light text-xs font-bold px-1 rounded border border-[#d4af37]">1</span>
+</button>
+<button class="w-14 h-14 rounded bg-background-dark border-2 border-[#d4af37] shadow-lg flex items-center justify-center hover:bg-primary transition-colors relative group">
+<span class="material-symbols-outlined text-[#d4af37] group-hover:text-white" data-icon="visibility">visibility</span>
+<span class="absolute -bottom-1 -left-1 bg-background-light text-xs font-bold px-1 rounded border border-[#d4af37]">0</span>
+<div class="absolute inset-0 bg-black bg-opacity-50 rounded"></div>
+</button>
+</div>
+</main>
+<!-- Trivia Panel (Bottom 30%) -->
+<section class="h-[307px] bg-background-dark text-background-light relative shadow-[0_-12px_32px_rgba(42,38,38,0.4)] z-50 rounded-t-lg border-t-2 border-[#d4af37] flex flex-col">
+<!-- Burning Fuse Timer (RTL: flows right to left) -->
+<div class="w-full h-1 bg-[#443b3b] absolute top-0 left-0 rounded-t-lg overflow-hidden">
+<div class="h-full bg-[#d4af37] w-[65%] relative">
+<div class="absolute left-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-[0_0_10px_#fff,0_0_20px_#ff9900]"></div>
+</div>
+</div>
+<div class="flex-grow flex flex-col items-center justify-center px-8 py-6 max-w-5xl mx-auto w-full gap-6">
+<!-- Question -->
+<div class="text-center w-full">
+<h2 class="text-2xl md:text-3xl font-bold tracking-wide text-white drop-shadow-md">
+                    في أي عام سقطت الإمبراطورية الرومانية الغربية؟
+                </h2>
+</div>
+<!-- Answer Grid -->
+<div class="grid grid-cols-2 gap-4 w-full">
+<button class="bg-[#3a3434] hover:bg-[#4a4343] border border-[#B8A99A] rounded py-4 px-6 text-lg font-bold tracking-wider transition-colors shadow-inner flex items-center justify-between group">
+<span>٤٧٦ م</span>
+<span class="material-symbols-outlined text-transparent group-hover:text-white" data-icon="circle">circle</span>
+</button>
+<button class="bg-[#3a3434] hover:bg-[#4a4343] border border-[#B8A99A] rounded py-4 px-6 text-lg font-bold tracking-wider transition-colors shadow-inner flex items-center justify-between group">
+<span>٣٩٥ م</span>
+<span class="material-symbols-outlined text-transparent group-hover:text-white" data-icon="circle">circle</span>
+</button>
+<button class="bg-[#3a3434] hover:bg-[#4a4343] border border-[#B8A99A] rounded py-4 px-6 text-lg font-bold tracking-wider transition-colors shadow-inner flex items-center justify-between group">
+<span>١٤٥٣ م</span>
+<span class="material-symbols-outlined text-transparent group-hover:text-white" data-icon="circle">circle</span>
+</button>
+<button class="bg-[#3a3434] hover:bg-[#4a4343] border border-[#B8A99A] rounded py-4 px-6 text-lg font-bold tracking-wider transition-colors shadow-inner flex items-center justify-between group">
+<span>٤١٠ م</span>
+<span class="material-symbols-outlined text-transparent group-hover:text-white" data-icon="circle">circle</span>
+</button>
+</div>
+</div>
+</section>
+</body></html>

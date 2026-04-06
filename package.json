@@ -1,0 +1,23 @@
+{
+  "name": "sword-of-knowledge",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n web,server -c blue,green \"npm run dev -w @sok/web\" \"npm run dev -w @sok/server\"",
+    "build": "npm run build -w @sok/web",
+    "start": "NODE_ENV=production npm run start -w @sok/server",
+    "lint": "npm run lint -w @sok/web && npm run lint -w @sok/server",
+    "db:migrate": "npm run db:migrate -w @sok/server",
+    "db:seed": "npm run db:seed -w @sok/server",
+    "db:setup": "npm run db:setup -w @sok/server",
+    "db:import-firestore": "npm run db:import-firestore -w @sok/server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
