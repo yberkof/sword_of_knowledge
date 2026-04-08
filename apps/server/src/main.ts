@@ -3,7 +3,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { createServer } from "http";
 import { Server } from "socket.io";
-import { getPool } from "../server/pgData.js";
+import { getPool, checkAndRotateInactiveLeaders } from "../server/pgData.js";
 import { createApiApp } from "./http/createApiApp.js";
 import { attachGameServer } from "./game/attachGameServer.js";
 
@@ -32,6 +32,13 @@ function main() {
   httpServer.listen(PORT, "0.0.0.0", () => {
     console.log(`Game server http://localhost:${PORT}`);
   });
+
+  // Run inactivity rotation check every 24 hours
+  setInterval(() => {
+    checkAndRotateInactiveLeaders().catch((err) => {
+      console.error("Inactivity rotation failed:", err);
+    });
+  }, 24 * 60 * 60 * 1000);
 }
 
 try {
