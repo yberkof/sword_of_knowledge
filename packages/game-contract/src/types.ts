@@ -96,3 +96,37 @@ export interface LeaderboardEntry {
   avatar: string;
   icon: unknown;
 }
+
+export enum ClanRole {
+  MEMBER = "member",
+  ELDER = "elder",
+  CO_LEADER = "co-leader",
+  LEADER = "leader",
+}
+
+export interface Clan {
+  id: string;
+  name: string;
+  description: string;
+  leaderId: string;
+  createdAt: string;
+  memberCount: number;
+}
+
+export interface ClanMember {
+  uid: string;
+  clanId: string;
+  role: ClanRole;
+  joinedAt: string;
+  lastKickAt?: string;
+  lastBroadcastAt?: string;
+  name?: string;
+  avatar?: string;
+  level?: number;
+}
+
+export const CLAN_CREATE_MIN_LEVEL = 10;
+export const CLAN_CREATE_GOLD_COST = 10000;
+export const CLAN_ELDER_KICK_COOLDOWN_MS = 20 * 60 * 1000;
+export const CLAN_BROADCAST_COOLDOWN_MS = 1 * 60 * 60 * 1000;
+export const CLAN_LEADER_INACTIVITY_LIMIT_MS = 60 * 24 * 60 * 60 * 1000; // 60 days
