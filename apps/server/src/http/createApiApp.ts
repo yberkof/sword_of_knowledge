@@ -23,6 +23,7 @@ import {
   getClanApplications,
   deleteClanApplication,
   acceptClanApplication,
+  transferLeadership,
 } from "../../server/pgData.js";
 import { requireFirebaseUser } from "./firebaseAuth.js";
 import {
@@ -73,6 +74,37 @@ export function createApiApp(): express.Express {
       }
       await touchUserLogin(uid, randomUUID());
       res.json(rowToClientProfile(row));
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: "Server error" });
+    }
+  });
+
+  app.post("/api/clans/:id/transfer-leadership", requireFirebaseUser, async (req, res) => {
+    const clanId = req.params.id;
+    const actingUid = (req as express.Request & { firebaseUid: string }).firebaseUid;
+    const { newLeaderUid } = (req.body || {}) as { newLeaderUid?: string };
+
+    if (!newLeaderUid) {
+      res.status(400).json({ error: "newLeaderUid required" });
+      return;
+    }
+
+    try {
+      const actor = await getMember(clanId, actingUid);
+      if (!actor || actor.role !== ClanRole.LEADER) {
+        res.status(403).json({ error: "Only leader can transfer leadership" });
+        return;
+      }
+
+      const target = await getMember(clanId, newLeaderUid);
+      if (!target || target.role !== ClanRole.CO_LEADER) {
+        res.status(400).json({ error: "New leader must be a co-leader" });
+        return;
+      }
+
+      await transferLeadership(clanId, actingUid, newLeaderUid);
+      res.json({ ok: true });
     } catch (e) {
       console.error(e);
       res.status(500).json({ error: "Server error" });

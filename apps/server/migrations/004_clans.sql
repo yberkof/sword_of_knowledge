@@ -1,4 +1,5 @@
 -- Clan system migration
+-- Note: users.last_login_at is already defined in 002_sword_of_knowledge_schema.sql
 
 CREATE TABLE IF NOT EXISTS sword_of_knowledge.clans (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

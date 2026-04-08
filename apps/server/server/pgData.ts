@@ -328,6 +328,35 @@ export async function applyMatchResults(
   }
 }
 
+export async function transferLeadership(clanId: string, oldLeaderId: string, newLeaderId: string) {
+  const p = getPool();
+  const client = await p.connect();
+  try {
+    await client.query("BEGIN");
+    // Demote old leader
+    await client.query(
+      `UPDATE ${SCH}.clan_members SET role = 'co-leader' WHERE clan_id = $1 AND user_id = $2`,
+      [clanId, oldLeaderId]
+    );
+    // Promote new leader
+    await client.query(
+      `UPDATE ${SCH}.clan_members SET role = 'leader' WHERE clan_id = $1 AND user_id = $2`,
+      [clanId, newLeaderId]
+    );
+    // Update clans table
+    await client.query(
+      `UPDATE ${SCH}.clans SET leader_id = $2 WHERE id = $1`,
+      [clanId, newLeaderId]
+    );
+    await client.query("COMMIT");
+  } catch (e) {
+    await client.query("ROLLBACK");
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
 export async function countActiveQuestions(): Promise<number> {
   const p = getPool();
   const { rows } = await p.query<{ c: string }>(
