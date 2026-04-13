@@ -1,0 +1,72 @@
+server:
+  port: ${PORT:8080}
+
+spring:
+  application:
+    name: spring-backend
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/postgres}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:P@ssw0rd}
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX:30}
+      minimum-idle: ${DB_POOL_MIN_IDLE:5}
+      connection-timeout: ${DB_POOL_CONN_TIMEOUT_MS:30000}
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    default-schema: sword_of_knowledge
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+app:
+  instance:
+    id: ${APP_INSTANCE_ID:local-1}
+  integration:
+    redis:
+      enabled: ${REDIS_ENABLED:false}
+      url: ${REDIS_URL:redis://localhost:6379/0}
+  realtime:
+    max-rooms: ${REALTIME_MAX_ROOMS:10000}
+    max-online-players: ${REALTIME_MAX_ONLINE_PLAYERS:12000}
+    room-task-queue-capacity: ${REALTIME_ROOM_QUEUE:50000}
+    room-worker-core-threads: ${REALTIME_WORKER_CORE:32}
+    room-worker-max-threads: ${REALTIME_WORKER_MAX:256}
+    record-room-task-latency: ${REALTIME_RECORD_LATENCY:true}
+    snapshot-to-redis: ${REALTIME_SNAPSHOT_REDIS:true}
+    snapshot-interval-ms: ${REALTIME_SNAPSHOT_INTERVAL_MS:15000}
+  auth:
+    issuer: ${AUTH_ISSUER:sok-local-auth}
+    jwt-secret: ${AUTH_JWT_SECRET:dev_change_me_local_jwt_secret_32_chars_min}
+    access-ttl-seconds: ${AUTH_ACCESS_TTL_SECONDS:900}
+    refresh-ttl-seconds: ${AUTH_REFRESH_TTL_SECONDS:2592000}
+  cors-origins: ${CORS_ORIGIN:http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000}
+  admin-uids: ${ADMIN_UIDS:}
+  admin-session-ttl-seconds: ${ADMIN_SESSION_TTL_SECONDS:28800}
+  admin-bootstrap:
+    enabled: ${ADMIN_BOOTSTRAP_ENABLED:true}
+    email: ${ADMIN_BOOTSTRAP_EMAIL:admin@sof.com}
+    password: ${ADMIN_BOOTSTRAP_PASSWORD:P@ssw0rd}
+  game-config-refresh-ms: ${GAME_CONFIG_REFRESH_MS:5000}
+  payments:
+    stripe-webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+  # Client uses Firebase Auth (Google); server only needs project id to verify ID tokens (no Admin SDK).
+  firebase:
+    project-id: ${FIREBASE_PROJECT_ID:gen-lang-client-0938666448}
+  socket:
+    enabled: ${SOCKET_ENABLED:true}
+    host: ${SOCKET_HOST:0.0.0.0}
+    port: ${SOCKET_PORT:8081}
+    allow-insecure: ${ALLOW_INSECURE_SOCKET:false}
+    max-conn-per-minute: ${SOCKET_MAX_CONN_PER_MIN:60}

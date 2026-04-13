@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sok-socket
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: sok-socket
+  template:
+    metadata:
+      labels:
+        app: sok-socket
+    spec:
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: app
+          image: sok-backend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+            - containerPort: 8081
+              name: socket
+          env:
+            - name: APP_INSTANCE_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: REDIS_ENABLED
+              value: "true"
+            - name: REDIS_URL
+              value: "redis://redis:6379/0"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            initialDelaySeconds: 45
+            periodSeconds: 20
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 25"]

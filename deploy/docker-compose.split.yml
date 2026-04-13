@@ -1,0 +1,44 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      SOCKET_ENABLED: "false"
+      DATABASE_URL: jdbc:postgresql://db:5432/postgres
+      REDIS_ENABLED: "true"
+      REDIS_URL: redis://redis:6379/0
+      APP_INSTANCE_ID: api-1
+    depends_on:
+      - db
+      - redis
+
+  socket:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    ports:
+      - "8082:8080"
+      - "8081:8081"
+    environment:
+      SOCKET_ENABLED: "true"
+      DATABASE_URL: jdbc:postgresql://db:5432/postgres
+      REDIS_ENABLED: "true"
+      REDIS_URL: redis://redis:6379/0
+      APP_INSTANCE_ID: socket-1
+    depends_on:
+      - db
+      - redis
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_PASSWORD: P@ssw0rd
+      POSTGRES_DB: postgres

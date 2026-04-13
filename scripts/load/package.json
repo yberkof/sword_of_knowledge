@@ -1,0 +1,7 @@
+{
+  "name": "srf-load",
+  "private": true,
+  "dependencies": {
+    "socket.io-client": "2.5.0"
+  }
+}

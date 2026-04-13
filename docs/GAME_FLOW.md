@@ -1,6 +1,9 @@
 # Game flow: how the client socket interacts with the server
 
-This document describes **lifecycle and sequencing**. For every event name and payload field, see [SOCKET_PROTOCOL.md](./SOCKET_PROTOCOL.md).
+> **Heads-up:** This document was written for the **legacy Node** game server (`conquest`, `expansion`, `game_start`, tiebreaker minigames, etc.). The **Spring Boot** backend in *this* repo implements a **different** ruleset and phase graph (castle placement → claiming → battle/duel).  
+> **Use instead:** [docs/spring/game-flow-deep-dive.md](./spring/game-flow-deep-dive.md) plus [docs/spring/03-socket-protocol.md](./spring/03-socket-protocol.md).
+
+This page is kept for historical cross-reference. For every legacy event name and payload field, see [SOCKET_PROTOCOL.md](./SOCKET_PROTOCOL.md).
 
 ## Golden rules
 

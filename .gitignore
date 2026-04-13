@@ -7,3 +7,9 @@ coverage/
 .env*
 !.env.example
 service-account.json
+# Firebase service account (use FIREBASE_CREDENTIALS_RESOURCE or GOOGLE_APPLICATION_CREDENTIALS in prod)
+src/main/resources/firebase.json
+target/
+.idea/
+# Added by code-review-graph
+.code-review-graph/
