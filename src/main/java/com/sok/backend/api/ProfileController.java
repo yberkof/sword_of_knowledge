@@ -1,11 +1,11 @@
 package com.sok.backend.api;
 
 import com.sok.backend.api.dto.ProfileCreateRequest;
+import com.sok.backend.api.dto.ProfilePatchRequest;
 import com.sok.backend.api.dto.ProfileResponse;
 import com.sok.backend.security.SecurityUtils;
 import com.sok.backend.service.ProfileService;
 import java.util.Collections;
-import java.util.Map;
 import java.util.Optional;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -45,8 +45,13 @@ public class ProfileController {
   }
 
   @PatchMapping
-  public ResponseEntity<?> patchProfile() {
-    return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-        .body(Collections.singletonMap("error", "Not found"));
+  public ResponseEntity<?> patchProfile(@RequestBody(required = false) ProfilePatchRequest request) {
+    String uid = SecurityUtils.currentUid();
+    Optional<ProfileResponse> out = profileService.patchProfile(uid, request);
+    if (!out.isPresent()) {
+      return ResponseEntity.status(HttpStatus.NOT_FOUND)
+          .body(Collections.singletonMap("error", "Not found"));
+    }
+    return ResponseEntity.ok(out.get());
   }
 }

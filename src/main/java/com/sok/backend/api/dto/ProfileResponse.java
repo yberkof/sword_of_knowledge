@@ -6,7 +6,7 @@ public class ProfileResponse {
   private final String uid;
   private final String name;
   private final String username;
-  private final String countryFlag;
+  private final String countryCode;
   private final String title;
   private final int level;
   private final int xp;
@@ -21,7 +21,7 @@ public class ProfileResponse {
       String uid,
       String name,
       String username,
-      String countryFlag,
+      String countryCode,
       String title,
       int level,
       int xp,
@@ -34,7 +34,7 @@ public class ProfileResponse {
     this.uid = uid;
     this.name = name;
     this.username = username;
-    this.countryFlag = countryFlag;
+    this.countryCode = countryCode;
     this.title = title;
     this.level = level;
     this.xp = xp;
@@ -49,7 +49,7 @@ public class ProfileResponse {
   public String getUid() { return uid; }
   public String getName() { return name; }
   public String getUsername() { return username; }
-  public String getCountryFlag() { return countryFlag; }
+  public String getCountryCode() { return countryCode; }
   public String getTitle() { return title; }
   public int getLevel() { return level; }
   public int getXp() { return xp; }

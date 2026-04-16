@@ -6,25 +6,16 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 @Configuration
 public class SecurityConfig {
-  /**
-   * Fully skips Spring Security (and JWT filter) for public routes. Fixes cases where
-   * {@code antMatchers(PERMIT_ALL)} / {@code requestMatchers(OrRequestMatcher)} still enforced
-   * {@code authenticated()} (401 with {@code Unauthorized} from entry point).
-   */
-  @Bean
-  WebSecurityCustomizer publicPathsIgnoredBySpringSecurity() {
-    return web -> web.ignoring().requestMatchers(PublicApiPaths.permitAllMatchersVarargs());
-  }
 
   @Bean
   SecurityFilterChain securityFilterChain(HttpSecurity http, LocalJwtAuthFilter localJwtAuthFilter)
@@ -34,6 +25,8 @@ public class SecurityConfig {
     http.authorizeHttpRequests(
         authz ->
             authz
+                .requestMatchers(new AntPathRequestMatcher("/**", "OPTIONS"))
+                .permitAll()
                 .requestMatchers(PublicApiPaths.permitAllMatcher())
                 .permitAll()
                 .anyRequest()

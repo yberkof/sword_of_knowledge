@@ -1,6 +1,13 @@
 server:
   port: ${PORT:8080}
 
+logging:
+  level:
+    # Realtime duel / claiming — INFO is always visible with default Spring Boot logback.
+    com.sok.backend.realtime.SocketGateway: INFO
+    com.sok.backend.realtime.SocketIoConfig: INFO
+    com.corundumstudio.socketio: WARN
+
 spring:
   application:
     name: spring-backend

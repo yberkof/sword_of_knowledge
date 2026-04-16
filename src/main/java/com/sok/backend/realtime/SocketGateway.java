@@ -362,20 +362,45 @@ public class SocketGateway implements DisposableBean {
           String roomId = asString(payload, "roomId");
           String uid = asString(payload, "uid");
           int value = payload.path("value").asInt(Integer.MIN_VALUE);
+          log.info("sok evt submit_estimation roomId={} uid={} value={}", roomId, uid, value);
           submitToRoom(roomId, new Runnable() {
             @Override
             public void run() {
               RoomState room = rooms.get(roomId);
-              if (room == null) return;
-              if (!PHASE_CLAIM_Q.equals(room.phase) && !PHASE_TIE.equals(room.phase)) return;
-              if (value == Integer.MIN_VALUE) return;
-              if (!room.playersByUid.containsKey(uid)) return;
-              if (room.estimationAnswers.containsKey(uid)) return;
+              if (room == null) {
+                log.warn("sok submit_estimation ignored: room missing roomId={}", roomId);
+                return;
+              }
+              if (!PHASE_CLAIM_Q.equals(room.phase) && !PHASE_TIE.equals(room.phase)) {
+                log.warn(
+                    "sok submit_estimation ignored: wrong phase roomId={} phase={} (want claiming_question or battle_tiebreaker)",
+                    roomId,
+                    room.phase);
+                return;
+              }
+              if (value == Integer.MIN_VALUE) {
+                log.warn("sok submit_estimation ignored: value missing roomId={} uid={}", roomId, uid);
+                return;
+              }
+              if (!room.playersByUid.containsKey(uid)) {
+                log.warn("sok submit_estimation ignored: uid not in room roomId={} uid={}", roomId, uid);
+                return;
+              }
+              if (room.estimationAnswers.containsKey(uid)) {
+                log.warn("sok submit_estimation ignored: duplicate submit roomId={} uid={}", roomId, uid);
+                return;
+              }
               AnswerMetric m = new AnswerMetric();
               m.uid = uid;
               m.value = value;
               m.latencyMs = System.currentTimeMillis() - room.phaseStartedAt;
               room.estimationAnswers.put(uid, m);
+              log.info(
+                  "sok submit_estimation accepted roomId={} uid={} answers={}/{}",
+                  roomId,
+                  uid,
+                  room.estimationAnswers.size(),
+                  onlinePlayerCount(room));
               if (room.estimationAnswers.size() == onlinePlayerCount(room)) {
                 resolveEstimationRound(server, room);
               } else {
@@ -397,12 +422,38 @@ public class SocketGateway implements DisposableBean {
             @Override
             public void run() {
               RoomState room = rooms.get(roomId);
-              if (room == null || !PHASE_CLAIM_PICK.equals(room.phase)) return;
-              if (!uid.equals(room.claimTurnUid)) return;
+              if (room == null || !PHASE_CLAIM_PICK.equals(room.phase)) {
+                log.warn(
+                    "sok claim_region ignored: room or phase roomId={} uid={} phase={}",
+                    roomId,
+                    uid,
+                    room == null ? "null" : room.phase);
+                return;
+              }
+              if (!uid.equals(room.claimTurnUid)) {
+                log.warn(
+                    "sok claim_region ignored: not your turn roomId={} uid={} claimTurnUid={}",
+                    roomId,
+                    uid,
+                    room.claimTurnUid);
+                return;
+              }
               Integer left = room.claimPicksLeftByUid.get(uid);
-              if (left == null || left <= 0) return;
+              if (left == null || left <= 0) {
+                log.warn("sok claim_region ignored: no picks left roomId={} uid={}", roomId, uid);
+                return;
+              }
               RegionState r = room.regions.get(regionId);
-              if (r == null || r.ownerUid != null) return;
+              if (r == null || r.ownerUid != null) {
+                log.warn(
+                    "sok claim_region ignored: bad hex or already owned roomId={} uid={} regionId={} hasRegion={} owner={}",
+                    roomId,
+                    uid,
+                    regionId,
+                    r != null,
+                    r == null ? null : r.ownerUid);
+                return;
+              }
               r.ownerUid = uid;
               PlayerState p = room.playersByUid.get(uid);
               p.score += pointValue(room, regionId);
@@ -411,10 +462,22 @@ public class SocketGateway implements DisposableBean {
               if (left - 1 <= 0) {
                 rotateClaimTurn(room);
               }
+              log.info(
+                  "sok claim_region ok roomId={} uid={} regionId={} picksLeftForUid={} neutralRemaining={}",
+                  roomId,
+                  uid,
+                  regionId,
+                  room.claimPicksLeftByUid.get(uid),
+                  countNeutralRegions(room));
               emitRoomUpdate(server, room);
               if (allRegionsClaimed(room)) {
+                log.info("sok all regions claimed → battle roomId={}", roomId);
                 startBattlePhase(server, room);
               } else if (claimsQueueEmpty(room)) {
+                log.info(
+                    "sok claim queue empty, neutralRemaining={} → next estimation roomId={}",
+                    countNeutralRegions(room),
+                    roomId);
                 startClaimingQuestionRound(server, room);
               }
             }
@@ -496,6 +559,11 @@ public class SocketGateway implements DisposableBean {
           validateUidOrDisconnect(client, payload);
           String roomId = asString(payload, "roomId");
           String uid = asString(payload, "uid");
+          log.info(
+              "sok evt submit_answer roomId={} uid={} rawAnswerIndex={}",
+              roomId,
+              uid,
+              payload.path("answerIndex"));
           Integer answerIndex =
               gameInputRules.coerceChoiceIndex(
                   payload.path("answerIndex").isMissingNode()
@@ -504,16 +572,38 @@ public class SocketGateway implements DisposableBean {
           if (answerIndex == null && payload.path("answerIndex").asInt(99999) == -1) {
             answerIndex = -1;
           }
-          if (answerIndex == null) return;
+          if (answerIndex == null) {
+            log.warn("sok submit_answer rejected: could not coerce answerIndex roomId={} uid={}", roomId, uid);
+            return;
+          }
           final int finalAnswer = answerIndex;
           submitToRoom(roomId, new Runnable() {
             @Override
             public void run() {
               RoomState room = rooms.get(roomId);
-              if (room == null || room.activeDuel == null || PHASE_TIE.equals(room.phase)) return;
+              if (room == null) {
+                log.warn("sok submit_answer ignored: room missing roomId={}", roomId);
+                return;
+              }
+              if (room.activeDuel == null || PHASE_TIE.equals(room.phase)) {
+                log.warn(
+                    "sok submit_answer ignored: MCQ only in duel phase (use submit_estimation in tiebreaker) roomId={} phase={} hasDuel={}",
+                    roomId,
+                    room.phase,
+                    room.activeDuel != null);
+                return;
+              }
               DuelState duel = room.activeDuel;
               boolean participant = uid.equals(duel.attackerUid) || uid.equals(duel.defenderUid);
-              if (!participant || duel.answers.containsKey(uid)) return;
+              if (!participant || duel.answers.containsKey(uid)) {
+                log.warn(
+                    "sok submit_answer ignored: not participant or duplicate roomId={} uid={} participant={} duplicate={}",
+                    roomId,
+                    uid,
+                    participant,
+                    duel.answers.containsKey(uid));
+                return;
+              }
               DuelAnswer ans = new DuelAnswer();
               ans.answerIndex = finalAnswer;
               ans.timeTaken =
@@ -521,6 +611,12 @@ public class SocketGateway implements DisposableBean {
                       runtimeConfigService.get().getDuelDurationMs(),
                       System.currentTimeMillis() - room.phaseStartedAt);
               duel.answers.put(uid, ans);
+              log.info(
+                  "sok submit_answer accepted roomId={} uid={} idx={} duelAnswerCount={}",
+                  roomId,
+                  uid,
+                  finalAnswer,
+                  duel.answers.size());
               boolean done = duel.answers.containsKey(duel.attackerUid);
               if (!"neutral".equals(duel.defenderUid)) done = done && duel.answers.containsKey(duel.defenderUid);
               if (done) resolveDuel(server, room);
@@ -634,26 +730,34 @@ public class SocketGateway implements DisposableBean {
         return new MatchmakingAllocation(id, true);
       }
 
+      // Public queue: include the indexed room even when players.size() == 0 — the first member is
+      // added asynchronously (submitToRoom), so requiring size == 1 caused a second client to clear
+      // soloPublicWaitingRoomId and open a duplicate waiting room.
       if (soloPublicWaitingRoomId != null) {
         RoomState solo = rooms.get(soloPublicWaitingRoomId);
         if (solo != null
             && PHASE_WAITING.equals(solo.phase)
             && solo.inviteCode == null
-            && solo.players.size() == 1
             && solo.players.size() < cfg.getMaxPlayers()) {
           return new MatchmakingAllocation(soloPublicWaitingRoomId, false);
         }
         soloPublicWaitingRoomId = null;
       }
 
+      RoomState bestPublicWaiting = null;
       for (RoomState room : rooms.values()) {
         if (PHASE_WAITING.equals(room.phase)
             && room.inviteCode == null
-            && room.players.size() == 1
             && room.players.size() < cfg.getMaxPlayers()) {
-          soloPublicWaitingRoomId = room.id;
-          return new MatchmakingAllocation(room.id, false);
+          if (bestPublicWaiting == null
+              || room.players.size() > bestPublicWaiting.players.size()) {
+            bestPublicWaiting = room;
+          }
         }
+      }
+      if (bestPublicWaiting != null) {
+        soloPublicWaitingRoomId = bestPublicWaiting.id;
+        return new MatchmakingAllocation(bestPublicWaiting.id, false);
       }
 
       String id = newRoomId();
@@ -728,10 +832,11 @@ public class SocketGateway implements DisposableBean {
       return;
     }
     synchronized (matchmakingLock) {
-      if (soloPublicWaitingRoomId != null
-          && soloPublicWaitingRoomId.equals(room.id)
-          && room.players.size() != 1) {
-        soloPublicWaitingRoomId = null;
+      if (soloPublicWaitingRoomId != null && soloPublicWaitingRoomId.equals(room.id)) {
+        GameRuntimeConfig cfg = runtimeConfigService.get();
+        if (room.players.size() >= cfg.getMaxPlayers()) {
+          soloPublicWaitingRoomId = null;
+        }
       }
     }
   }
@@ -920,7 +1025,15 @@ public class SocketGateway implements DisposableBean {
 
   private void resolveEstimationRound(SocketIOServer server, RoomState room) {
     cancelTimer(room, "claim_question_timeout");
-    if (room.activeNumericQuestion == null) return;
+    if (room.activeNumericQuestion == null) {
+      log.warn("sok resolveEstimationRound skipped: no activeNumericQuestion roomId={}", room.id);
+      return;
+    }
+    log.info(
+        "sok resolveEstimationRound roomId={} phase={} answers={}",
+        room.id,
+        room.phase,
+        room.estimationAnswers.size());
     if (room.estimationAnswers.isEmpty()) {
       for (PlayerState p : room.players) {
         if (!p.isEliminated && p.online) {
@@ -1007,6 +1120,14 @@ public class SocketGateway implements DisposableBean {
     return true;
   }
 
+  private static int countNeutralRegions(RoomState room) {
+    int n = 0;
+    for (RegionState r : room.regions.values()) {
+      if (r.ownerUid == null) n++;
+    }
+    return n;
+  }
+
   private boolean allPlayersPlacedCastle(RoomState room) {
     List<String> active = new ArrayList<String>();
     Map<String, Integer> castles = new HashMap<String, Integer>();
@@ -1022,6 +1143,11 @@ public class SocketGateway implements DisposableBean {
     room.phase = PHASE_BATTLE;
     room.currentTurnIndex = firstAliveIndex(room);
     room.phaseStartedAt = System.currentTimeMillis();
+    log.info(
+        "sok startBattlePhase roomId={} turnIndex={} turnUid={}",
+        room.id,
+        room.currentTurnIndex,
+        room.players.isEmpty() ? "none" : room.players.get(room.currentTurnIndex).uid);
     HashMap<String, Object> payload = new HashMap<String, Object>();
     payload.put("phase", PHASE_BATTLE);
     payload.put("round", room.round);
@@ -1116,6 +1242,12 @@ public class SocketGateway implements DisposableBean {
     cancelTimer(room, "duel_timeout");
     if (room.activeDuel == null || room.activeDuel.mcqQuestion == null) return;
     DuelState duel = room.activeDuel;
+    log.info(
+        "sok resolveDuel start room={} attacker={} defender={} phase={}",
+        room.id,
+        duel.attackerUid,
+        duel.defenderUid,
+        room.phase);
     DuelAnswer attacker = duel.answers.get(duel.attackerUid);
     DuelAnswer defender = "neutral".equals(duel.defenderUid) ? null : duel.answers.get(duel.defenderUid);
     boolean attackerCorrect = attacker != null && attacker.answerIndex == duel.mcqQuestion.correctIndex;
@@ -1126,6 +1258,7 @@ public class SocketGateway implements DisposableBean {
         && attackerCorrect
         && defenderCorrect
         && attacker.timeTaken == defender.timeTaken) {
+      log.info("sok duel MCQ tie (same latency) → tiebreaker room={}", room.id);
       startDuel(server, room, duel.attackerUid, duel.targetRegionId, true);
       return;
     }
@@ -1140,12 +1273,22 @@ public class SocketGateway implements DisposableBean {
             d,
             !"neutral".equals(duel.defenderUid));
     boolean attackerWins = outcome == BattlePhaseService.DuelOutcome.ATTACKER_WINS;
+    log.info(
+        "sok duel outcome room={} attackerWins={} attackerCorrect={} defenderCorrect={}",
+        room.id,
+        attackerWins,
+        attackerCorrect,
+        defenderCorrect);
     finishBattle(server, room, attackerWins, attackerCorrect, defenderCorrect, false, duel);
   }
 
   private void resolveTiebreaker(SocketIOServer server, RoomState room) {
     cancelTimer(room, "tiebreak_timeout");
-    if (room.activeDuel == null || room.activeDuel.numericQuestion == null) return;
+    if (room.activeDuel == null || room.activeDuel.numericQuestion == null) {
+      log.warn("sok resolveTiebreaker skipped roomId={} hasDuel={}", room.id, room.activeDuel != null);
+      return;
+    }
+    log.info("sok resolveTiebreaker roomId={}", room.id);
     DuelState duel = room.activeDuel;
     autoFillTiebreaker(duel, runtimeConfigService.get().getTiebreakDurationMs());
     AnswerMetric a = duel.tiebreakerAnswers.get(duel.attackerUid);
@@ -1201,6 +1344,7 @@ public class SocketGateway implements DisposableBean {
     payload.put("room", roomToClient(room));
     payload.put("result", result);
     server.getRoomOperations(room.id).sendEvent("duel_resolved", payload);
+    log.debug("finishBattle emitted duel_resolved room={}", room.id);
     emitRoomUpdate(server, room);
     evaluateEndConditions(server, room);
   }
@@ -1233,6 +1377,10 @@ public class SocketGateway implements DisposableBean {
 
   private void evaluateEndConditions(SocketIOServer server, RoomState room) {
     if (PHASE_ENDED.equals(room.phase)) return;
+    // Waiting / invite lobbies often have a single player; domination must not run until the match
+    // actually starts (castle_placement), or rooms are torn down every scheduler tick and roomCount
+    // stays at zero from an ops perspective.
+    if (PHASE_WAITING.equals(room.phase)) return;
     List<PlayerState> alive = new ArrayList<PlayerState>();
     for (PlayerState p : room.players) {
       if (!p.isEliminated) {

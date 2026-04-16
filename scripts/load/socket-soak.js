@@ -1,5 +1,6 @@
 /**
- * Socket.IO soak (Engine.IO v3 / socket.io-client v2). Install: npm ci --prefix scripts/load
+ * Socket.IO soak (socket.io-client v2; server netty-socketio 2.0.13+ also accepts v3/v4 clients).
+ * Install: npm ci --prefix scripts/load
  * Usage: TOKEN=jwt BASE_URL=http://127.0.0.1:8081 ROOMS=50 node scripts/load/socket-soak.js
  */
 const io = require("socket.io-client");

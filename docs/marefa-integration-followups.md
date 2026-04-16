@@ -19,7 +19,7 @@ See also [spring/02-rest-api.md](spring/02-rest-api.md).
 
 ## Best practice: front vs back (sole client)
 
-1. **Protocol:** Socket.IO client major must match server (EIO3 / netty-socketio → client v2.x), not renames alone.
+1. **Protocol:** srf uses **netty-socketio 2.0.13+** (Engine.IO v4 capable). Marefa may use **socket.io-client v4**; keep server on **≥2.0.13**. Load scripts may still use **socket.io-client v2**—both negotiate with the server.
 2. **Naming / JSON drift:** smallest change wins—TS adapter or Java alias/rename; update `scripts/load/socket-soak.js` if Java names change.
 3. **Policy / security:** CORS, JWT, `ALLOW_INSECURE_SOCKET` — backend or env only.
 4. **Missing game features:** e.g. `use_powerup` — implement on server or hide in UI; do not fake success in prod.

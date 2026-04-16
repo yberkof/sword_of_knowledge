@@ -3,6 +3,7 @@ package com.sok.backend.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sok.backend.api.dto.ProfileCreateRequest;
+import com.sok.backend.api.dto.ProfilePatchRequest;
 import com.sok.backend.api.dto.ProfileResponse;
 import com.sok.backend.persistence.UserRecord;
 import com.sok.backend.persistence.UserRepository;
@@ -41,12 +42,54 @@ public class ProfileService {
     return toResponse(created);
   }
 
+  public Optional<ProfileResponse> patchProfile(String uid, ProfilePatchRequest request) {
+    if (request == null) {
+      return userRepository.findById(uid).map(this::toResponse);
+    }
+    Optional<UserRecord> row = userRepository.findById(uid);
+    if (!row.isPresent()) {
+      return Optional.empty();
+    }
+    UserRecord u = row.get();
+    String name =
+        request.getName() != null && !request.getName().trim().isEmpty()
+            ? request.getName().trim()
+            : u.displayName();
+    String country = resolveCountryCode(request, u.countryCode());
+    String avatar =
+        request.getAvatar() != null ? request.getAvatar().trim() : nullSafe(u.avatarUrl());
+    userRepository.updateProfileFields(
+        uid, name, u.username() == null ? name : u.username(), country, avatar);
+    return userRepository.findById(uid).map(this::toResponse);
+  }
+
+  private static String nullSafe(String s) {
+    return s == null ? "" : s;
+  }
+
+  private static String resolveCountryCode(ProfilePatchRequest request, String current) {
+    String code = normalizeCountryCode(request.getCountryCode());
+    if (!code.isEmpty()) return code;
+    return nullSafe(current);
+  }
+
+  private static String normalizeCountryCode(String raw) {
+    if (raw == null) return "";
+    String code = raw.trim().toUpperCase();
+    if (code.length() != 2) return "";
+    for (int i = 0; i < code.length(); i++) {
+      char c = code.charAt(i);
+      if (c < 'A' || c > 'Z') return "";
+    }
+    return code;
+  }
+
   private ProfileResponse toResponse(UserRecord row) {
     return new ProfileResponse(
         row.id(),
         row.displayName(),
         row.username() == null ? row.displayName() : row.username(),
-        row.countryFlag(),
+        row.countryCode(),
         row.title(),
         row.level(),
         row.xp(),

@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 public class GameRuntimeConfig {
-  private int minPlayers = 3;
+  private int minPlayers = 2;
   private int maxPlayers = 6;
   private int initialCastleHp = 3;
   private int claimFirstPicks = 2;

@@ -5,7 +5,7 @@ public class UserRecord {
   private final String displayName;
   private final String username;
   private final String avatarUrl;
-  private final String countryFlag;
+  private final String countryCode;
   private final String title;
   private final int level;
   private final int xp;
@@ -20,7 +20,7 @@ public class UserRecord {
       String displayName,
       String username,
       String avatarUrl,
-      String countryFlag,
+      String countryCode,
       String title,
       int level,
       int xp,
@@ -33,7 +33,7 @@ public class UserRecord {
     this.displayName = displayName;
     this.username = username;
     this.avatarUrl = avatarUrl;
-    this.countryFlag = countryFlag;
+    this.countryCode = countryCode;
     this.title = title;
     this.level = level;
     this.xp = xp;
@@ -48,7 +48,7 @@ public class UserRecord {
   public String displayName() { return displayName; }
   public String username() { return username; }
   public String avatarUrl() { return avatarUrl; }
-  public String countryFlag() { return countryFlag; }
+  public String countryCode() { return countryCode; }
   public String title() { return title; }
   public int level() { return level; }
   public int xp() { return xp; }

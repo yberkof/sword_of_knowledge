@@ -21,7 +21,7 @@ public class UserRepository {
   public Optional<UserRecord> findById(String uid) {
     List<UserRecord> rows =
         jdbcTemplate.query(
-            "SELECT id, display_name, username, avatar_url, country_flag, title, level, xp, gold, gems,"
+            "SELECT id, display_name, username, avatar_url, country_code, title, level, xp, gold, gems,"
                 + " trophies, rank, inventory FROM "
                 + SCH
                 + ".users WHERE id = ?",
@@ -56,8 +56,8 @@ public class UserRepository {
     jdbcTemplate.update(
         "INSERT INTO "
             + SCH
-            + ".users (id, display_name, username, email, password_hash, avatar_url, country_flag, title, level, xp, gold, gems, trophies, rank, inventory)"
-            + " VALUES (?, ?, ?, ?, ?, '', '🇸🇦', 'Knowledge Knight', 1, 0, 1000, 50, 0, 'Bronze', '[]'::jsonb)",
+            + ".users (id, display_name, username, email, password_hash, avatar_url, country_code, title, level, xp, gold, gems, trophies, rank, inventory)"
+            + " VALUES (?, ?, ?, ?, ?, '', 'SA', 'Knowledge Knight', 1, 0, 1000, 50, 0, 'Bronze', '[]'::jsonb)",
         id,
         displayName,
         username,
@@ -69,9 +69,9 @@ public class UserRepository {
     return jdbcTemplate.queryForObject(
         "INSERT INTO "
             + SCH
-            + ".users (id, display_name, username, avatar_url, country_flag, title, level, xp, gold, gems, trophies, rank, inventory)"
-            + " VALUES (?, ?, ?, ?, '🇸🇦', 'Knowledge Knight', 1, 0, 1000, 50, 0, 'Bronze', '[]'::jsonb)"
-            + " RETURNING id, display_name, username, avatar_url, country_flag, title, level, xp, gold, gems, trophies, rank, inventory",
+            + ".users (id, display_name, username, avatar_url, country_code, title, level, xp, gold, gems, trophies, rank, inventory)"
+            + " VALUES (?, ?, ?, ?, 'SA', 'Knowledge Knight', 1, 0, 1000, 50, 0, 'Bronze', '[]'::jsonb)"
+            + " RETURNING id, display_name, username, avatar_url, country_code, title, level, xp, gold, gems, trophies, rank, inventory",
         userMapper(),
         uid,
         displayName,
@@ -83,8 +83,8 @@ public class UserRepository {
     return jdbcTemplate.queryForObject(
         "INSERT INTO "
             + SCH
-            + ".users (id, display_name, username, avatar_url, country_flag, title, level, xp, gold, gems, trophies, rank, inventory)"
-            + " VALUES (?, ?, ?, ?, '🇸🇦', 'Knowledge Knight', 1, 0, 1000, 50, 0, 'Bronze', '[]'::jsonb)"
+            + ".users (id, display_name, username, avatar_url, country_code, title, level, xp, gold, gems, trophies, rank, inventory)"
+            + " VALUES (?, ?, ?, ?, 'SA', 'Knowledge Knight', 1, 0, 1000, 50, 0, 'Bronze', '[]'::jsonb)"
             + " ON CONFLICT (id) DO UPDATE SET "
             + " display_name = COALESCE(NULLIF(EXCLUDED.display_name, ''), "
             + SCH
@@ -96,7 +96,7 @@ public class UserRepository {
             + SCH
             + ".users.avatar_url),"
             + " updated_at = NOW()"
-            + " RETURNING id, display_name, username, avatar_url, country_flag, title, level, xp, gold, gems, trophies, rank, inventory",
+            + " RETURNING id, display_name, username, avatar_url, country_code, title, level, xp, gold, gems, trophies, rank, inventory",
         userMapper(),
         uid,
         displayName,
@@ -111,6 +111,20 @@ public class UserRepository {
             + ".users SET last_login_at = NOW(), active_session_id = ?, updated_at = NOW() WHERE id = ?",
         UUID.randomUUID().toString(),
         uid);
+  }
+
+  public int updateProfileFields(
+      String id, String displayName, String username, String countryCode, String avatarUrl) {
+    return jdbcTemplate.update(
+        "UPDATE "
+            + SCH
+            + ".users SET display_name = ?, username = ?, country_code = ?, avatar_url = ?,"
+            + " updated_at = NOW() WHERE id = ?",
+        displayName,
+        username,
+        countryCode,
+        avatarUrl == null ? "" : avatarUrl,
+        id);
   }
 
   public int purchaseItem(String uid, String itemId, int costGold) {
@@ -155,7 +169,7 @@ public class UserRepository {
         rs.getString("display_name"),
         rs.getString("username"),
         rs.getString("avatar_url"),
-        rs.getString("country_flag"),
+        rs.getString("country_code"),
         rs.getString("title"),
         rs.getInt("level"),
         rs.getInt("xp"),
