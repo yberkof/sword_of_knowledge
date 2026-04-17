@@ -1,10 +1,15 @@
-# Push to master → SSH: compose down → git pull → compose up --build → health check.
-# No GHCR; the VPS builds the image (multi-stage Dockerfile with Maven inside Docker).
+# Push to master → SSH: git pull → mvn package → systemd restart → health check.
+# No Docker on the VPS for this job.
 #
-# Secrets: SSH_HOST, SSH_USER, SSH_PRIVATE_KEY, DEPLOY_PATH (absolute path to repo clone on server)
+# Secrets: SSH_HOST, SSH_USER, SSH_PRIVATE_KEY, DEPLOY_PATH (absolute repo root on server)
 #
-# Server: Docker + Compose plugin only; no JDK/Maven on the host required.
-# GitHub token in the job is used only for `git pull` over HTTPS (private repos).
+# Server one-time:
+#   - OpenJDK 17 + Maven (e.g. apt install openjdk-17-jdk maven)
+#   - sudo cp deploy/sok-backend.service.example /etc/systemd/system/sok-backend.service
+#     Edit paths in that file, then: systemctl daemon-reload && enable --now sok-backend
+#   - Repo root .env (same vars as before; systemd EnvironmentFile loads it — not Spring's dotenv)
+#
+# GitHub token is only used for git pull over HTTPS (private repos).
 #
 name: Deploy backend
 
@@ -20,7 +25,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: SSH — pull, build, restart
+      - name: SSH — pull, Maven package, systemd restart
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -30,11 +35,14 @@ jobs:
           script: |
             set -euo pipefail
             cd "${{ secrets.DEPLOY_PATH }}"
-            test -f deploy/docker-compose.deploy.yml
-            docker compose -f deploy/docker-compose.deploy.yml down || true
             git checkout master
             git pull --ff-only "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" master
-            docker compose -f deploy/docker-compose.deploy.yml up -d --build
+            mvn -B package -DskipTests
+            if [ "$(id -u)" -eq 0 ]; then
+              systemctl restart sok-backend
+            else
+              sudo -n systemctl restart sok-backend
+            fi
             ok=0
             for _ in $(seq 1 25); do
               if curl -fsS --connect-timeout 2 --max-time 8 "http://127.0.0.1:8080/api/health" >/dev/null 2>&1; then
@@ -44,7 +52,11 @@ jobs:
               sleep 3
             done
             if [ "$ok" -ne 1 ]; then
-              docker compose -f deploy/docker-compose.deploy.yml logs --tail 120 backend
+              if [ "$(id -u)" -eq 0 ]; then
+                journalctl -u sok-backend -n 120 --no-pager || true
+              else
+                sudo -n journalctl -u sok-backend -n 120 --no-pager || true
+              fi
               exit 1
             fi
             curl -fsS "http://127.0.0.1:8080/api/health" | head -c 200

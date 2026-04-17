@@ -1,0 +1,22 @@
+# Copy to /etc/systemd/system/sok-backend.service (adjust paths), then:
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now sok-backend
+#
+# JVM reads env from EnvironmentFile — same KEY=value as Docker .env (no "export").
+# Repo path below must match GitHub secret DEPLOY_PATH.
+
+[Unit]
+Description=Sword Of Knowledge Spring backend
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/srf
+EnvironmentFile=-/home/srf/.env
+ExecStart=/usr/bin/java -jar /home/srf/target/spring-backend-0.0.1-SNAPSHOT.jar
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
