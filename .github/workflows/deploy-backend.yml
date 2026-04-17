@@ -37,6 +37,30 @@ jobs:
             cd "${{ secrets.DEPLOY_PATH }}"
             git checkout master
             git pull --ff-only "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" master
+            if ! command -v java >/dev/null 2>&1; then
+              echo "Install JDK 17: sudo apt install -y openjdk-17-jdk" >&2
+              exit 1
+            fi
+            if [ -z "${JAVA_HOME:-}" ] || [ ! -x "${JAVA_HOME}/bin/java" ]; then
+              JAVA_HOME="$(java -XshowSettings:properties -version 2>&1 | tr -d '\r' | sed -n 's/^[[:space:]]*java\.home = //p' | head -1)"
+              export JAVA_HOME
+            fi
+            if [ -z "${JAVA_HOME:-}" ] || [ ! -x "${JAVA_HOME}/bin/java" ]; then
+              for d in /usr/lib/jvm/java-17-openjdk-*; do
+                [ -d "$d" ] && [ -x "$d/bin/java" ] || continue
+                export JAVA_HOME="$d"
+                break
+              done
+            fi
+            if [ -z "${JAVA_HOME:-}" ] || [ ! -x "${JAVA_HOME}/bin/java" ]; then
+              echo "JAVA_HOME must point to JDK 17 (install openjdk-17-jdk)." >&2
+              exit 1
+            fi
+            export JAVA_HOME
+            java -version 2>&1 | grep -q '"17\.' || {
+              echo "Default java must be 17 (sudo update-alternatives --config java)." >&2
+              exit 1
+            }
             chmod +x ./mvnw
             ./mvnw -B package -DskipTests
             if [ "$(id -u)" -eq 0 ]; then

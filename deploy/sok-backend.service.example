@@ -14,6 +14,8 @@ Wants=network-online.target
 Type=simple
 WorkingDirectory=/home/srf
 EnvironmentFile=-/home/srf/.env
+# Match “ls /usr/lib/jvm” on this machine (amd64 vs arm64).
+Environment=JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 ExecStart=/usr/bin/java -jar /home/srf/target/spring-backend-0.0.1-SNAPSHOT.jar
 Restart=on-failure
 RestartSec=10
