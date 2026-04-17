@@ -12,6 +12,7 @@ spring:
   application:
     name: spring-backend
   datasource:
+    # JDBC only: jdbc:postgresql://host:port/database — or use postgresql://user:pass@host:port/db in DATABASE_URL (normalized at startup).
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/postgres}
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:P@ssw0rd}
