@@ -1,0 +1,14 @@
+# Production-style compose: image built in CI and pushed to GHCR.
+# On the server: set BACKEND_IMAGE (CI sets it) and keep a .env next to this file
+# with DATABASE_URL, DB_USER, DB_PASSWORD, REDIS_*, AUTH_JWT_SECRET, SOCKET_ENABLED, etc.
+#
+# Run from repo root: docker compose -f deploy/docker-compose.deploy.yml up -d
+services:
+  backend:
+    image: ${BACKEND_IMAGE:?Set BACKEND_IMAGE to ghcr.io/owner/repo:tag}
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    ports:
+      - "8080:8080"
+      - "8081:8081"
