@@ -4,7 +4,7 @@
 # Secrets: SSH_HOST, SSH_USER, SSH_PRIVATE_KEY, DEPLOY_PATH (absolute repo root on server)
 #
 # Server one-time:
-#   - OpenJDK 17 + Maven (e.g. apt install openjdk-17-jdk maven)
+#   - OpenJDK 17 only (e.g. apt install openjdk-17-jdk). Build uses ./mvnw — no system `mvn` package.
 #   - sudo cp deploy/sok-backend.service.example /etc/systemd/system/sok-backend.service
 #     Edit paths in that file, then: systemctl daemon-reload && enable --now sok-backend
 #   - Repo root .env (same vars as before; systemd EnvironmentFile loads it — not Spring's dotenv)
@@ -25,7 +25,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: SSH — pull, Maven package, systemd restart
+      - name: SSH — pull, ./mvnw package, systemd restart
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -37,7 +37,8 @@ jobs:
             cd "${{ secrets.DEPLOY_PATH }}"
             git checkout master
             git pull --ff-only "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" master
-            mvn -B package -DskipTests
+            chmod +x ./mvnw
+            ./mvnw -B package -DskipTests
             if [ "$(id -u)" -eq 0 ]; then
               systemctl restart sok-backend
             else
