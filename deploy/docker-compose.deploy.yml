@@ -5,7 +5,7 @@ services:
     build:
       context: ..
       dockerfile: deploy/Dockerfile
-    image: sok-backend:local
+    image: spring-backend:local
     restart: unless-stopped
     env_file:
       - ../.env

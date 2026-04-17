@@ -15,7 +15,7 @@ spec:
       terminationGracePeriodSeconds: 60
       containers:
         - name: app
-          image: sok-backend:latest
+          image: spring-backend:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080

@@ -5,8 +5,8 @@
 #
 # Server one-time:
 #   - OpenJDK 17 only (e.g. apt install openjdk-17-jdk). Build uses ./mvnw — no system `mvn` package.
-#   - sudo cp deploy/sok-backend.service.example /etc/systemd/system/sok-backend.service
-#     Edit paths in that file, then: systemctl daemon-reload && enable --now sok-backend
+#   - sudo cp deploy/spring-backend.service /etc/systemd/system/spring-backend.service
+#     Edit paths in that file, then: systemctl daemon-reload && enable --now spring-backend
 #   - Repo root .env (same vars as before; systemd EnvironmentFile loads it — not Spring's dotenv)
 #
 # GitHub token is only used for git pull over HTTPS (private repos).
@@ -64,9 +64,9 @@ jobs:
             chmod +x ./mvnw
             ./mvnw -B package -DskipTests
             if [ "$(id -u)" -eq 0 ]; then
-              systemctl restart sok-backend
+              systemctl restart spring-backend
             else
-              sudo -n systemctl restart sok-backend
+              sudo -n systemctl restart spring-backend
             fi
             ok=0
             for _ in $(seq 1 25); do
@@ -78,9 +78,9 @@ jobs:
             done
             if [ "$ok" -ne 1 ]; then
               if [ "$(id -u)" -eq 0 ]; then
-                journalctl -u sok-backend -n 120 --no-pager || true
+                journalctl -u spring-backend -n 120 --no-pager || true
               else
-                sudo -n journalctl -u sok-backend -n 120 --no-pager || true
+                sudo -n journalctl -u spring-backend -n 120 --no-pager || true
               fi
               exit 1
             fi
