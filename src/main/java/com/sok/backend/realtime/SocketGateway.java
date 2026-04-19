@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -51,6 +52,11 @@ public class SocketGateway implements DisposableBean {
   private static final String PHASE_DUEL = "duel";
   private static final String PHASE_TIE = "battle_tiebreaker";
   private static final String PHASE_ENDED = "ended";
+
+  /** Free-for-all: each player is independent (default). */
+  private static final String MODE_FFA = "ffa";
+  /** Two teams of two; join order slots A,A,B,B — requires exactly four players to start. */
+  private static final String MODE_TEAMS_2V2 = "teams_2v2";
 
   private static final class MatchmakingAllocation {
     final String roomId;
@@ -207,6 +213,9 @@ public class SocketGateway implements DisposableBean {
           String name = asString(payload, "name");
           if (name.trim().isEmpty()) name = "Warrior";
           final String finalName = name;
+          final String joinMatchMode = payload.path("matchMode").asText("");
+          final String joinRulesetId = payload.path("rulesetId").asText("");
+          final String joinMapId = payload.path("mapId").asText("");
           String privateCode = payload.path("privateCode").asText("");
           String normalized = gameInputRules.normalizePrivateCode(privateCode);
           String existingRoomId = uidToRoom.get(uid);
@@ -258,6 +267,17 @@ public class SocketGateway implements DisposableBean {
                     client.sendEvent("join_rejected", mapOf("reason", "room_full"));
                     return;
                   }
+                  if (room.players.isEmpty()) {
+                    if (!joinMatchMode.isEmpty()) {
+                      room.matchMode = normalizeMatchMode(joinMatchMode, cfg.getDefaultMatchMode());
+                    }
+                    if (!joinRulesetId.isEmpty()) {
+                      room.rulesetId = joinRulesetId;
+                    }
+                    if (!joinMapId.isEmpty()) {
+                      room.mapId = joinMapId;
+                    }
+                  }
                   PlayerState player = new PlayerState();
                   player.uid = uid;
                   player.name = finalName;
@@ -274,7 +294,8 @@ public class SocketGateway implements DisposableBean {
                   room.lastActivityAt = System.currentTimeMillis();
                   updateSoloPublicIndexAfterJoin(room);
                   emitRoomUpdate(server, room);
-                  if (room.players.size() >= cfg.getMinPlayers() && PHASE_WAITING.equals(room.phase)) {
+                  if (room.players.size() >= requiredPlayersToStart(room, cfg)
+                      && PHASE_WAITING.equals(room.phase)) {
                     startCastlePlacementPhase(server, room);
                   }
                 }
@@ -317,7 +338,8 @@ public class SocketGateway implements DisposableBean {
               if (room == null || room.inviteCode == null || !PHASE_WAITING.equals(room.phase)) return;
               if (!uid.equals(room.hostUid)) return;
               GameRuntimeConfig cfg = runtimeConfigService.get();
-              if (room.players.size() < cfg.getMinPlayers() || room.players.size() > cfg.getMaxPlayers()) return;
+              if (room.players.size() < requiredPlayersToStart(room, cfg)
+                  || room.players.size() > cfg.getMaxPlayers()) return;
               startCastlePlacementPhase(server, room);
             }
           });
@@ -543,6 +565,11 @@ public class SocketGateway implements DisposableBean {
                 client.sendEvent("attack_invalid", mapOf("reason", "own_territory"));
                 return;
               }
+              String defenderUid = targetHex.ownerUid;
+              if (defenderUid != null && sameTeam(room, attackerUid, defenderUid)) {
+                client.sendEvent("attack_invalid", mapOf("reason", "ally_territory"));
+                return;
+              }
               if (!canAttackRegion(room, attackerUid, targetHexId)) {
                 client.sendEvent("attack_invalid", mapOf("reason", "not_adjacent"));
                 return;
@@ -716,7 +743,7 @@ public class SocketGateway implements DisposableBean {
           waitingInviteToRoomId.remove(normalizedInvite, idByInvite);
         }
         String id = newRoomId();
-        RoomState room = new RoomState();
+        RoomState room = newRoomStateWithDefaults(cfg);
         room.id = id;
         room.phase = PHASE_WAITING;
         room.inviteCode = normalizedInvite;
@@ -761,7 +788,7 @@ public class SocketGateway implements DisposableBean {
       }
 
       String id = newRoomId();
-      RoomState room = new RoomState();
+      RoomState room = newRoomStateWithDefaults(cfg);
       room.id = id;
       room.phase = PHASE_WAITING;
       room.inviteCode = null;
@@ -774,6 +801,79 @@ public class SocketGateway implements DisposableBean {
       touchRoomRegistry(id);
       return new MatchmakingAllocation(id, true);
     }
+  }
+
+  private RoomState newRoomStateWithDefaults(GameRuntimeConfig cfg) {
+    RoomState room = new RoomState();
+    room.mapId = cfg.getDefaultMapId();
+    room.matchMode = normalizeMatchMode(cfg.getDefaultMatchMode(), MODE_FFA);
+    room.rulesetId = cfg.getDefaultRulesetId();
+    return room;
+  }
+
+  private static String normalizeMatchMode(String raw, String fallback) {
+    String base = (fallback == null || fallback.trim().isEmpty()) ? MODE_FFA : fallback.trim().toLowerCase();
+    if (raw == null || raw.trim().isEmpty()) {
+      return base;
+    }
+    String t = raw.trim().toLowerCase();
+    if (MODE_TEAMS_2V2.equals(t)) {
+      return MODE_TEAMS_2V2;
+    }
+    return MODE_FFA;
+  }
+
+  private static int requiredPlayersToStart(RoomState room, GameRuntimeConfig cfg) {
+    if (room != null && MODE_TEAMS_2V2.equals(room.matchMode)) {
+      return 4;
+    }
+    return cfg.getMinPlayers();
+  }
+
+  private static boolean sameTeam(RoomState room, String uidA, String uidB) {
+    PlayerState a = room.playersByUid.get(uidA);
+    PlayerState b = room.playersByUid.get(uidB);
+    if (a == null || b == null) return false;
+    if (a.teamId == null || b.teamId == null) return false;
+    return a.teamId.equals(b.teamId);
+  }
+
+  /**
+   * Assigns team ids for teams_2v2 by join order (slots 0–1 → A, 2–3 → B). No-op for FFA.
+   */
+  private void configureTeamsForMatch(RoomState room) {
+    for (PlayerState p : room.players) {
+      p.teamId = null;
+    }
+    if (!MODE_TEAMS_2V2.equals(room.matchMode)) {
+      return;
+    }
+    if (room.players.size() != 4) {
+      log.warn(
+          "sok teams_2v2 requires 4 players room={} count={}; falling back to ffa",
+          room.id,
+          room.players.size());
+      room.matchMode = MODE_FFA;
+      return;
+    }
+    room.players.get(0).teamId = "A";
+    room.players.get(1).teamId = "A";
+    room.players.get(2).teamId = "B";
+    room.players.get(3).teamId = "B";
+  }
+
+  private static String topScorerOnTeam(RoomState room, String teamId) {
+    String bestUid = null;
+    int bestScore = Integer.MIN_VALUE;
+    for (PlayerState p : room.players) {
+      if (!p.isEliminated && teamId.equals(p.teamId)) {
+        if (p.score > bestScore) {
+          bestScore = p.score;
+          bestUid = p.uid;
+        }
+      }
+    }
+    return bestUid != null ? bestUid : room.players.get(0).uid;
   }
 
   private void touchRoomRegistry(String roomId) {
@@ -961,6 +1061,7 @@ public class SocketGateway implements DisposableBean {
   private void startCastlePlacementPhase(SocketIOServer server, RoomState room) {
     clearMatchmakingIndexesForRoom(room);
     GameRuntimeConfig cfg = runtimeConfigService.get();
+    configureTeamsForMatch(room);
     room.phase = PHASE_CASTLE;
     room.round = 1;
     room.currentTurnIndex = 0;
@@ -1165,6 +1266,10 @@ public class SocketGateway implements DisposableBean {
   private boolean canAttackRegion(RoomState room, String attackerUid, int targetRegionId) {
     RegionState target = room.regions.get(targetRegionId);
     if (target == null) return false;
+    String ownerUid = target.ownerUid;
+    if (ownerUid != null && sameTeam(room, attackerUid, ownerUid)) {
+      return false;
+    }
     for (Integer n : target.neighbors) {
       RegionState near = room.regions.get(n);
       if (near != null && attackerUid.equals(near.ownerUid)) return true;
@@ -1387,6 +1492,19 @@ public class SocketGateway implements DisposableBean {
         alive.add(p);
       }
     }
+    if (MODE_TEAMS_2V2.equals(room.matchMode)) {
+      HashSet<String> teamsAlive = new HashSet<String>();
+      for (PlayerState p : alive) {
+        if (p.teamId != null) {
+          teamsAlive.add(p.teamId);
+        }
+      }
+      if (teamsAlive.size() == 1 && !alive.isEmpty()) {
+        String winningTeam = teamsAlive.iterator().next();
+        finishGame(server, room, topScorerOnTeam(room, winningTeam), "team_survival");
+        return;
+      }
+    }
     if (alive.size() == 1) {
       finishGame(server, room, alive.get(0).uid, "domination");
       return;
@@ -1544,6 +1662,10 @@ public class SocketGateway implements DisposableBean {
     payload.put("id", room.id);
     payload.put("phase", room.phase);
     payload.put("round", room.round);
+    payload.put("battleRound", room.round);
+    payload.put("mapId", room.mapId);
+    payload.put("matchMode", room.matchMode);
+    payload.put("rulesetId", room.rulesetId);
     payload.put("currentTurnIndex", room.currentTurnIndex);
     payload.put("hostUid", room.hostUid);
     payload.put("inviteCode", room.inviteCode);
@@ -1576,6 +1698,7 @@ public class SocketGateway implements DisposableBean {
       row.put("eliminatedAt", p.eliminatedAt);
       row.put("castleRegionId", p.castleRegionId);
       row.put("online", p.online);
+      row.put("teamId", p.teamId);
       out.add(row);
     }
     return out;
@@ -1628,6 +1751,12 @@ public class SocketGateway implements DisposableBean {
 
   private static class RoomState {
     String id;
+    /** Mirrors client map registry id (e.g. Marefa basic_1v1_map). */
+    String mapId;
+    /** "ffa" or "teams_2v2". */
+    String matchMode;
+    /** Stable id for alternate rules / future game modules. */
+    String rulesetId;
     List<PlayerState> players = new ArrayList<PlayerState>();
     Map<String, PlayerState> playersByUid = new HashMap<String, PlayerState>();
     Map<Integer, RegionState> regions = new HashMap<Integer, RegionState>();
@@ -1659,6 +1788,8 @@ public class SocketGateway implements DisposableBean {
     Integer castleRegionId;
     int score;
     String color;
+    /** Null in FFA; "A" / "B" for teams_2v2. */
+    String teamId;
     boolean isEliminated;
     boolean online;
     long lastSeenAt;

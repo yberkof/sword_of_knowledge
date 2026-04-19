@@ -18,6 +18,12 @@ public class GameRuntimeConfig {
   private int maxMatchDurationSeconds = 1800;
   private int reconnectGraceSeconds = 90;
   private String defaultQuestionCategory = "general";
+  /** Sent on every room_update as mapId for Marefa map registry matching. */
+  private String defaultMapId = "basic_1v1_map";
+  /** Default match grouping: "ffa" or "teams_2v2" (teams require exactly four players). */
+  private String defaultMatchMode = "ffa";
+  /** Identifier for rule plugins / alternate game loops on the same socket protocol. */
+  private String defaultRulesetId = "sok_v1";
   private Map<String, Integer> regionPoints = new HashMap<String, Integer>();
   private Map<String, List<Integer>> neighbors = new HashMap<String, List<Integer>>();
 
@@ -77,6 +83,12 @@ public class GameRuntimeConfig {
   public void setReconnectGraceSeconds(int reconnectGraceSeconds) { this.reconnectGraceSeconds = reconnectGraceSeconds; }
   public String getDefaultQuestionCategory() { return defaultQuestionCategory; }
   public void setDefaultQuestionCategory(String defaultQuestionCategory) { this.defaultQuestionCategory = defaultQuestionCategory; }
+  public String getDefaultMapId() { return defaultMapId; }
+  public void setDefaultMapId(String defaultMapId) { this.defaultMapId = defaultMapId; }
+  public String getDefaultMatchMode() { return defaultMatchMode; }
+  public void setDefaultMatchMode(String defaultMatchMode) { this.defaultMatchMode = defaultMatchMode; }
+  public String getDefaultRulesetId() { return defaultRulesetId; }
+  public void setDefaultRulesetId(String defaultRulesetId) { this.defaultRulesetId = defaultRulesetId; }
   public Map<String, Integer> getRegionPoints() { return regionPoints; }
   public void setRegionPoints(Map<String, Integer> regionPoints) { this.regionPoints = regionPoints; }
   public Map<String, List<Integer>> getNeighbors() { return neighbors; }
