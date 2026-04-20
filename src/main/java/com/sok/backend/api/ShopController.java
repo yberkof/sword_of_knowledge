@@ -2,7 +2,6 @@ package com.sok.backend.api;
 
 import com.sok.backend.api.dto.ShopPurchaseRequest;
 import com.sok.backend.security.SecurityUtils;
-import com.sok.backend.service.RateLimitService;
 import com.sok.backend.service.ShopService;
 import java.util.Collections;
 import java.util.HashMap;
@@ -20,11 +19,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/shop")
 public class ShopController {
   private final ShopService shopService;
-  private final RateLimitService rateLimitService;
 
-  public ShopController(ShopService shopService, RateLimitService rateLimitService) {
+  public ShopController(ShopService shopService) {
     this.shopService = shopService;
-    this.rateLimitService = rateLimitService;
   }
 
   @PostMapping("/purchase")
@@ -41,10 +38,6 @@ public class ShopController {
           .body(Collections.<String, Object>singletonMap("ok", false));
     }
     String uid = SecurityUtils.currentUid();
-    if (!rateLimitService.allow("shop:" + uid, 20, 60_000L)) {
-      return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
-          .body(Collections.<String, Object>singletonMap("ok", false));
-    }
     boolean ok = shopService.purchase(uid, body.getItemId(), idempotencyKey.trim());
     if (!ok) {
       return ResponseEntity.status(HttpStatus.BAD_REQUEST)
