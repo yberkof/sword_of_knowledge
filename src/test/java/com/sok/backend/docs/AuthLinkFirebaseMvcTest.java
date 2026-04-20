@@ -16,7 +16,6 @@ import com.sok.backend.security.AuthenticatedUser;
 import com.sok.backend.service.AuthLinkService;
 import com.sok.backend.service.AuthService;
 import com.sok.backend.service.AuthTokenService;
-import com.sok.backend.service.RateLimitService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,11 +36,9 @@ class AuthLinkFirebaseMvcTest {
   @MockBean private AuthService authService;
   @MockBean private AuthLinkService authLinkService;
   @MockBean private AuthTokenService authTokenService;
-  @MockBean private RateLimitService rateLimitService;
 
   @BeforeEach
   void authenticate() {
-    when(rateLimitService.allow(anyString(), anyInt(), anyLong())).thenReturn(true);
     Authentication auth =
         new UsernamePasswordAuthenticationToken(new AuthenticatedUser("email-user-1"), null);
     SecurityContextHolder.getContext().setAuthentication(auth);
