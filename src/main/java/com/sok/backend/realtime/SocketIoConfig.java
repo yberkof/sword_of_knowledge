@@ -8,7 +8,6 @@ import com.corundumstudio.socketio.SocketConfig;
 import com.corundumstudio.socketio.SocketIOServer;
 import com.sok.backend.config.DevOriginUtil;
 import com.sok.backend.service.AuthTokenService;
-import com.sok.backend.service.RateLimitService;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -47,10 +46,8 @@ public class SocketIoConfig implements InitializingBean, DisposableBean {
       @Value("${app.socket.port}") int port,
       @Value("${app.cors-origins:http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000}")
           String corsOrigins,
-      @Value("${app.socket.max-conn-per-minute:60}") int maxConnPerMinute,
       @Value("${app.socket.allow-insecure:false}") boolean allowInsecureSocket,
       AuthTokenService authTokenService,
-      RateLimitService rateLimitService,
       SocketGateway socketGateway) {
     final List<String> allowedOrigins = socketAllowedOrigins(corsOrigins);
     Configuration config = new Configuration();
@@ -70,10 +67,6 @@ public class SocketIoConfig implements InitializingBean, DisposableBean {
         new AuthorizationListener() {
           @Override
           public AuthorizationResult getAuthorizationResult(HandshakeData data) {
-            String ip = data.getAddress() == null ? "unknown" : String.valueOf(data.getAddress());
-            if (!rateLimitService.allow("socket:handshake:" + ip, maxConnPerMinute, 60_000L)) {
-              return AuthorizationResult.FAILED_AUTHORIZATION;
-            }
             if (!allowedOrigins.isEmpty()) {
               String origin = data.getHttpHeaders().get("Origin");
               if (origin != null
