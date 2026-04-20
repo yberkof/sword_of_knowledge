@@ -11,7 +11,6 @@ import com.sok.backend.config.PublicApiPaths;
 import com.sok.backend.service.AuthLinkService;
 import com.sok.backend.service.AuthService;
 import com.sok.backend.service.AuthTokenService;
-import com.sok.backend.service.RateLimitService;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +28,6 @@ class NewClientPathAuthMvcTest {
   @MockBean private AuthService authService;
   @MockBean private AuthLinkService authLinkService;
   @MockBean private AuthTokenService authTokenService;
-  @MockBean private RateLimitService rateLimitService;
 
   @Test
   void permitAllIncludesAuthPrefix() {
