@@ -4,11 +4,9 @@ import com.sok.backend.api.dto.PaymentVerifyRequest;
 import com.sok.backend.persistence.PaymentTransactionRecord;
 import com.sok.backend.security.SecurityUtils;
 import com.sok.backend.service.PaymentService;
-import com.sok.backend.service.RateLimitService;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import javax.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,20 +19,14 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/payments")
 public class PaymentController {
   private final PaymentService paymentService;
-  private final RateLimitService rateLimitService;
 
-  public PaymentController(PaymentService paymentService, RateLimitService rateLimitService) {
+  public PaymentController(PaymentService paymentService) {
     this.paymentService = paymentService;
-    this.rateLimitService = rateLimitService;
   }
 
   @PostMapping("/verify")
   public ResponseEntity<?> verify(@RequestBody(required = false) PaymentVerifyRequest request) {
     String uid = SecurityUtils.currentUid();
-    if (!rateLimitService.allow("pay:verify:" + uid, 30, 60_000L)) {
-      return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
-          .body(Collections.singletonMap("error", "rate_limited"));
-    }
     if (request == null
         || request.getProvider() == null
         || request.getExternalTransactionId() == null
@@ -77,13 +69,7 @@ public class PaymentController {
       @RequestHeader(name = "X-External-Transaction-Id", required = false) String externalTransactionId,
       @RequestHeader(name = "X-Product-Code", required = false) String productCode,
       @RequestHeader(name = "X-Amount-Minor", required = false) Long amountMinor,
-      @RequestHeader(name = "X-Currency", required = false) String currency,
-      HttpServletRequest request) {
-    String ip = request.getRemoteAddr();
-    if (!rateLimitService.allow("pay:webhook:stripe:" + ip, 120, 60_000L)) {
-      return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
-          .body(Collections.singletonMap("error", "rate_limited"));
-    }
+      @RequestHeader(name = "X-Currency", required = false) String currency) {
     if (userId == null
         || externalTransactionId == null
         || productCode == null

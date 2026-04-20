@@ -13,7 +13,6 @@ import com.sok.backend.security.SecurityUtils;
 import com.sok.backend.service.AuthLinkService;
 import com.sok.backend.service.AuthService;
 import com.sok.backend.service.AuthTokenService;
-import com.sok.backend.service.RateLimitService;
 import java.util.Collections;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
@@ -29,13 +28,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
   private final AuthService authService;
   private final AuthLinkService authLinkService;
-  private final RateLimitService rateLimitService;
 
   public AuthController(
-      AuthService authService, AuthLinkService authLinkService, RateLimitService rateLimitService) {
+      AuthService authService, AuthLinkService authLinkService) {
     this.authService = authService;
     this.authLinkService = authLinkService;
-    this.rateLimitService = rateLimitService;
   }
 
   /**
@@ -54,10 +51,6 @@ public class AuthController {
     if (grantType.isEmpty()) {
       return ResponseEntity.status(HttpStatus.BAD_REQUEST)
           .body(Collections.singletonMap("error", "grantType is required"));
-    }
-    if (!rateLimitService.allow("auth:token:" + grantType + ":" + extractIp(httpRequest), 25, 60_000L)) {
-      return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
-          .body(Collections.singletonMap("error", "rate_limited"));
     }
     if (!authService.providerForGrant(grantType).isPresent()) {
       return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -115,10 +108,6 @@ public class AuthController {
       return ResponseEntity.status(HttpStatus.BAD_REQUEST)
           .body(Collections.singletonMap("error", "email and password are required"));
     }
-    if (!rateLimitService.allow("auth:login:" + extractIp(httpRequest), 30, 60_000L)) {
-      return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
-          .body(Collections.singletonMap("error", "rate_limited"));
-    }
     try {
       AuthTokenService.TokenPair pair =
           authService.loginWithPassword(
@@ -144,10 +133,6 @@ public class AuthController {
         || request.getPassword().isEmpty()) {
       return ResponseEntity.status(HttpStatus.BAD_REQUEST)
           .body(Collections.singletonMap("error", "email and password are required"));
-    }
-    if (!rateLimitService.allow("auth:register:" + extractIp(httpRequest), 10, 60_000L)) {
-      return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
-          .body(Collections.singletonMap("error", "rate_limited"));
     }
     try {
       AuthTokenService.TokenPair pair =
@@ -190,10 +175,6 @@ public class AuthController {
           .body(Collections.singletonMap("error", "identity_not_configured"));
     }
     try {
-      if (!rateLimitService.allow("auth:exchange:" + extractIp(httpRequest), 20, 60_000L)) {
-        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
-            .body(Collections.singletonMap("error", "rate_limited"));
-      }
       AuthTokenService.TokenPair pair =
           authService.exchangeIdToken(
               request.getIdToken(),
@@ -228,10 +209,6 @@ public class AuthController {
       return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
           .body(Collections.singletonMap("error", "identity_not_configured"));
     }
-    if (!rateLimitService.allow("auth:link:firebase:" + extractIp(httpRequest), 15, 60_000L)) {
-      return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
-          .body(Collections.singletonMap("error", "rate_limited"));
-    }
     try {
       authLinkService.linkFirebaseForCurrentUser(SecurityUtils.currentUid(), request.getIdToken());
       return ResponseEntity.ok(Collections.singletonMap("ok", true));
@@ -258,10 +235,6 @@ public class AuthController {
     if (request == null || request.getRefreshToken() == null || request.getRefreshToken().trim().isEmpty()) {
       return ResponseEntity.status(HttpStatus.BAD_REQUEST)
           .body(Collections.singletonMap("error", "refreshToken is required"));
-    }
-    if (!rateLimitService.allow("auth:refresh:" + extractIp(httpRequest), 40, 60_000L)) {
-      return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
-          .body(Collections.singletonMap("error", "rate_limited"));
     }
     AuthTokenService.TokenPair pair =
         authService.refresh(request.getRefreshToken(), request.getDeviceInfo(), extractIp(httpRequest));
