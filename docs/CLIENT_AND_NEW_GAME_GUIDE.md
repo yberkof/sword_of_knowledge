@@ -131,9 +131,41 @@ This keeps map clicks and HUD aligned with the server without hard-coding player
 
 ---
 
-## 6. Files touched on the backend (this change)
+## 6. Tie-breaking modes (MCQ duel speed tie)
 
-- [`GameRuntimeConfig.java`](../src/main/java/com/sok/backend/service/config/GameRuntimeConfig.java) — `defaultMapId`, `defaultMatchMode`, `defaultRulesetId`.
-- [`SocketGateway.java`](../src/main/java/com/sok/backend/realtime/SocketGateway.java) — metadata on room, `teamId`, team win / ally attack rules, `join_matchmaking` optional fields, `room_to_client` extensions.
+When **both** players answer the MCQ correctly with **identical latency**, the server must break the tie. Configure globally via **`GameRuntimeConfig`** (runtime JSON):
+
+| `tieBreakerMode` | Behaviour |
+|------------------|-----------|
+| `numeric_closest` (default) | Second-phase **estimation** question (`battle_tiebreaker_start`). Answers via existing `submit_estimation` while `phase === battle_tiebreaker`; answers are stored server-side on the duel (not only in room claiming state). Closest numeric wins; equal distance → faster submission wins. |
+| `mcq_retry` | Run another **full MCQ duel** up to **`maxMcqTieRetries`** times. If still tied by same rule, falls back to **`numeric_closest`** for that resolution only. |
+| `attacker_advantage` | Attacker wins immediately (no extra round). |
+| `minigame_xo` | **Tic-tac-toe**: attacker is **1**, defender **2**, attacker opens. **`room_update.activeDuel`** includes `tiebreakKind: "xo"`, `xoCells` (length 9: `0` empty, `1` attacker, `2` defender), `xoTurnUid`. Client sends **`tiebreaker_xo_move`** `{ roomId, uid, cellIndex }` with `cellIndex` 0–8. Server emits **`tiebreaker_xo_start`** on entry and **`tiebreaker_xo_replay`** after a **draw** if **`xoDrawMaxReplay`** allows a cleared board; otherwise a draw awards **defender** the duel. |
+
+### Client checklist (Marefa)
+
+1. On `battle_tiebreaker_start`, open the **estimation** card only if `activeDuel.tiebreakKind` is absent or `"numeric"` (same as legacy).
+2. If `tiebreakKind === "xo"`, render a 3×3 grid; on tap emit `tiebreaker_xo_move`; refresh from `room_update`.
+3. Listen for `tiebreaker_xo_replay` to animate a new empty board.
+
+### Adding another minigame (backend)
+
+Use the **`com.sok.backend.domain.game.tiebreaker`** layer (SOLID extension points):
+
+1. **`TieBreakerModeIds`** — add a new canonical id string (e.g. `minigame_rps`).
+2. **`TieBreakerAttackPhaseStrategy`** — new `@Component` implementation with `@Order` **above** `NumericClosestTieBreakerAttackPhaseStrategy` (lower precedence / higher order value = tried first when multiple could match). Implement `supports(mode, defenderUid)` and `begin(BeginContext)` using **`TieBreakerRealtimeBridge`** only for I/O (no direct `SocketGateway` dependency).
+3. **`TieBreakerAttackPhaseComposer`** — injects all strategies; **no change** if the new bean is on the classpath.
+4. **Pure rules** — put win/loss math in a dedicated class (same pattern as **`XoBoardRules`**, **`NumericTiebreakEvaluator`**).
+5. **Moves** — optional `@Service` (like **`XoTieBreakInteractionService`**) returning an outcome enum; **`SocketGateway`** maps outcomes to `finishBattle` / emits only.
+6. **`McqSpeedTieResolutionService`** — extend only if the **MCQ speed tie** policy itself changes (retries, attacker advantage, …).
+
+Keep **`submit_estimation`** wired only when **`tiebreakKind === "numeric"`**; keep **`resolveTiebreaker`** for numeric autofill + **`NumericTiebreakEvaluator`**.
+
+---
+
+## 7. Files touched on the backend (reference)
+
+- [`GameRuntimeConfig.java`](../src/main/java/com/sok/backend/service/config/GameRuntimeConfig.java) — defaults for map/mode/ruleset, tie-break fields (`tieBreakerMode`, `maxMcqTieRetries`, `xoDrawMaxReplay`).
+- [`SocketGateway.java`](../src/main/java/com/sok/backend/realtime/SocketGateway.java) — room metadata, teams, tie-break branches, X-O events, `activeDuel` extensions.
 
 Build with JDK 17+: `mvn -q compile` from the `srf` project root.

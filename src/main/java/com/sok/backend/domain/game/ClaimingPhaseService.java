@@ -1,5 +1,6 @@
 package com.sok.backend.domain.game;
 
+import com.sok.backend.domain.game.engine.TurnOutcome;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -33,5 +34,18 @@ public class ClaimingPhaseService {
     if (!ranked.isEmpty()) out.put(ranked.get(0).uid, firstPicks);
     if (ranked.size() > 1) out.put(ranked.get(1).uid, secondPicks);
     return out;
+  }
+
+  /**
+   * Engine-facing ranking: returns a {@link TurnOutcome.Ranked} whose ordering is the uids of
+   * {@code rows} sorted by closeness then latency. Equivalent to calling
+   * {@link #rankByDeltaThenLatency} and extracting uids — provided here so phase code can return
+   * a {@link TurnOutcome} directly.
+   */
+  public TurnOutcome.Ranked rankAsOutcome(List<Metric> rows, int correctAnswer) {
+    List<Metric> ranked = rankByDeltaThenLatency(rows, correctAnswer);
+    List<String> uids = new ArrayList<String>(ranked.size());
+    for (Metric m : ranked) uids.add(m.uid);
+    return new TurnOutcome.Ranked(Collections.unmodifiableList(uids));
   }
 }

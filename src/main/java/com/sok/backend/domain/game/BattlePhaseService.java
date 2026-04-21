@@ -1,5 +1,6 @@
 package com.sok.backend.domain.game;
 
+import com.sok.backend.domain.game.engine.TurnOutcome;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -28,5 +29,30 @@ public class BattlePhaseService {
     return attackerLatencyMs <= defenderLatencyMs
         ? DuelOutcome.ATTACKER_WINS
         : DuelOutcome.DEFENDER_WINS;
+  }
+
+  /**
+   * Engine-facing variant of {@link #resolveMcq}. Maps the legacy {@link DuelOutcome} onto the
+   * sealed {@link TurnOutcome} so phase code can pattern-match on the three first-class
+   * situations (expanding / failed_attack / tie_breaking) without re-deriving them.
+   */
+  public TurnOutcome resolveMcqAsOutcome(
+      String attackerUid,
+      String defenderUid,
+      int targetRegionId,
+      int hpDamageOnWin,
+      boolean attackerCorrect,
+      boolean defenderCorrect,
+      long attackerLatencyMs,
+      long defenderLatencyMs,
+      boolean hasHumanDefender,
+      String tieBreakerStrategyId) {
+    DuelOutcome legacy =
+        resolveMcq(attackerCorrect, defenderCorrect, attackerLatencyMs, defenderLatencyMs, hasHumanDefender);
+    return switch (legacy) {
+      case ATTACKER_WINS -> new TurnOutcome.Expanding(attackerUid, targetRegionId, hpDamageOnWin);
+      case DEFENDER_WINS -> new TurnOutcome.FailedAttack(attackerUid, defenderUid);
+      case TIE -> new TurnOutcome.TieBreaking("mcq_speed_tie", tieBreakerStrategyId);
+    };
   }
 }

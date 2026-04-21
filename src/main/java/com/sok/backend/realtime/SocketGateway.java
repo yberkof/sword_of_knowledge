@@ -3,16 +3,36 @@ package com.sok.backend.realtime;
 import com.corundumstudio.socketio.SocketIOClient;
 import com.corundumstudio.socketio.SocketIOServer;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.sok.backend.domain.game.tiebreaker.McqSpeedTieOutcome;
+import com.sok.backend.domain.game.tiebreaker.McqSpeedTieResolutionService;
+import com.sok.backend.domain.game.tiebreaker.NumericTiebreakEvaluator;
+import com.sok.backend.domain.game.tiebreaker.TieBreakerAnswerAutofill;
+import com.sok.backend.domain.game.tiebreaker.TieBreakerAttackPhaseComposer;
+import com.sok.backend.domain.game.tiebreaker.TieBreakerAttackPhaseStrategy;
+import com.sok.backend.domain.game.tiebreaker.TieBreakerModeIds;
+import com.sok.backend.domain.game.tiebreaker.TieBreakerRealtimeBridge;
+import com.sok.backend.domain.game.tiebreaker.XoTieBreakInteractionService;
+import com.sok.backend.domain.game.tiebreaker.XoTieBreakPayloadFactory;
 import com.sok.backend.domain.game.BattlePhaseService;
 import com.sok.backend.domain.game.GameInputRules;
 import com.sok.backend.domain.game.QuestionEngineService;
 import com.sok.backend.domain.game.CastlePlacementPhaseService;
 import com.sok.backend.domain.game.ClaimingPhaseService;
 import com.sok.backend.domain.game.ResolutionPhaseService;
+import com.sok.backend.domain.game.engine.DefaultGameMode;
+import com.sok.backend.domain.game.engine.GameMode;
+import com.sok.backend.domain.game.engine.GameModeRegistry;
+import com.sok.backend.domain.game.engine.ModeRules;
 import com.sok.backend.config.RealtimeScaleProperties;
 import com.sok.backend.service.AuthTokenService;
 import com.sok.backend.service.ProgressionService;
 import com.sok.backend.service.config.GameRuntimeConfig;
+import com.sok.backend.realtime.match.AnswerMetric;
+import com.sok.backend.realtime.match.DuelAnswer;
+import com.sok.backend.realtime.match.DuelState;
+import com.sok.backend.realtime.match.PlayerState;
+import com.sok.backend.realtime.match.RegionState;
+import com.sok.backend.realtime.match.RoomState;
 import com.sok.backend.service.config.RuntimeGameConfigService;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
@@ -96,6 +116,11 @@ public class SocketGateway implements DisposableBean {
   private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(8);
   private final AtomicLong roomSeq = new AtomicLong(1L);
   private final AtomicLong lastSnapshotTickMs = new AtomicLong(0L);
+  private final McqSpeedTieResolutionService mcqSpeedTieResolutionService;
+  private final TieBreakerAttackPhaseComposer tieBreakerAttackPhaseComposer;
+  private final XoTieBreakInteractionService xoTieBreakInteractionService;
+  private final GameModeRegistry gameModeRegistry;
+  private final DefaultGameMode defaultGameMode;
 
   public SocketGateway(
       GameInputRules gameInputRules,
@@ -106,6 +131,11 @@ public class SocketGateway implements DisposableBean {
       ResolutionPhaseService resolutionPhaseService,
       ProgressionService progressionService,
       RuntimeGameConfigService runtimeConfigService,
+      McqSpeedTieResolutionService mcqSpeedTieResolutionService,
+      TieBreakerAttackPhaseComposer tieBreakerAttackPhaseComposer,
+      XoTieBreakInteractionService xoTieBreakInteractionService,
+      GameModeRegistry gameModeRegistry,
+      DefaultGameMode defaultGameMode,
       RealtimeScaleProperties scale,
       ObjectProvider<RoomRegistryService> roomRegistry,
       ObjectProvider<RoomSnapshotPublisher> snapshotPublisher,
@@ -118,6 +148,11 @@ public class SocketGateway implements DisposableBean {
     this.resolutionPhaseService = resolutionPhaseService;
     this.progressionService = progressionService;
     this.runtimeConfigService = runtimeConfigService;
+    this.mcqSpeedTieResolutionService = mcqSpeedTieResolutionService;
+    this.tieBreakerAttackPhaseComposer = tieBreakerAttackPhaseComposer;
+    this.xoTieBreakInteractionService = xoTieBreakInteractionService;
+    this.gameModeRegistry = gameModeRegistry;
+    this.defaultGameMode = defaultGameMode;
     this.scale = scale;
     this.roomRegistry = roomRegistry;
     this.snapshotPublisher = snapshotPublisher;
@@ -153,19 +188,9 @@ public class SocketGateway implements DisposableBean {
               }
             },
             new ThreadPoolExecutor.AbortPolicy());
-    Gauge.builder("sok.realtime.rooms", rooms, new java.util.function.ToDoubleFunction<Map<String, RoomState>>() {
-          @Override
-          public double applyAsDouble(Map<String, RoomState> value) {
-            return value.size();
-          }
-        })
+    Gauge.builder("sok.realtime.rooms", rooms, Map::size)
         .register(meterRegistry);
-    Gauge.builder("sok.realtime.players_online", this, new java.util.function.ToDoubleFunction<SocketGateway>() {
-          @Override
-          public double applyAsDouble(SocketGateway s) {
-            return s.currentOnlinePlayers();
-          }
-        })
+    Gauge.builder("sok.realtime.players_online", this, SocketGateway::currentOnlinePlayers)
         .register(meterRegistry);
     Gauge.builder("sok.realtime.room_worker_queue", roomWorkers, SocketGateway::queueDepthAsDouble)
         .register(meterRegistry);
@@ -408,6 +433,38 @@ public class SocketGateway implements DisposableBean {
                 log.warn("sok submit_estimation ignored: uid not in room roomId={} uid={}", roomId, uid);
                 return;
               }
+              if (PHASE_TIE.equals(room.phase)) {
+                DuelState duel = room.activeDuel;
+                if (duel == null || duel.numericQuestion == null || !"numeric".equals(duel.tiebreakKind)) {
+                  log.warn(
+                      "sok submit_estimation ignored: tiebreaker is not numeric estimation roomId={}",
+                      roomId);
+                  return;
+                }
+                if (!uid.equals(duel.attackerUid) && !uid.equals(duel.defenderUid)) {
+                  log.warn("sok submit_estimation ignored: not duel participant roomId={} uid={}", roomId, uid);
+                  return;
+                }
+                if (duel.tiebreakerAnswers.containsKey(uid)) {
+                  log.warn("sok submit_estimation ignored: duplicate tiebreak submit roomId={} uid={}", roomId, uid);
+                  return;
+                }
+                AnswerMetric m = new AnswerMetric();
+                m.uid = uid;
+                m.value = value;
+                m.latencyMs = System.currentTimeMillis() - room.phaseStartedAt;
+                duel.tiebreakerAnswers.put(uid, m);
+                boolean defenderHuman = !"neutral".equals(duel.defenderUid);
+                boolean both =
+                    duel.tiebreakerAnswers.containsKey(duel.attackerUid)
+                        && (!defenderHuman || duel.tiebreakerAnswers.containsKey(duel.defenderUid));
+                if (both) {
+                  resolveTiebreaker(server, room);
+                } else {
+                  emitRoomUpdate(server, room);
+                }
+                return;
+              }
               if (room.estimationAnswers.containsKey(uid)) {
                 log.warn("sok submit_estimation ignored: duplicate submit roomId={} uid={}", roomId, uid);
                 return;
@@ -574,6 +631,8 @@ public class SocketGateway implements DisposableBean {
                 client.sendEvent("attack_invalid", mapOf("reason", "not_adjacent"));
                 return;
               }
+              room.mcqSpeedTieRetries = 0;
+              room.tieBreakOverride = null;
               startDuel(server, room, attackerUid, targetHexId, false);
             }
           });
@@ -650,6 +709,82 @@ public class SocketGateway implements DisposableBean {
               else emitRoomUpdate(server, room);
             }
           });
+        });
+
+    server.addEventListener(
+        "tiebreaker_xo_move",
+        JsonNode.class,
+        (client, payload, ack) -> {
+          validateUidOrDisconnect(client, payload);
+          String roomId = asString(payload, "roomId");
+          String uid = asString(payload, "uid");
+          int cellIndex = payload.path("cellIndex").asInt(-1);
+          submitToRoom(
+              roomId,
+              new Runnable() {
+                @Override
+                public void run() {
+                  RoomState room = rooms.get(roomId);
+                  if (room == null || !PHASE_TIE.equals(room.phase) || room.activeDuel == null) {
+                    return;
+                  }
+                  DuelState duel = room.activeDuel;
+                  if (!"xo".equals(duel.tiebreakKind) || duel.xoCells == null) {
+                    log.warn(
+                        "sok tiebreaker_xo_move ignored: wrong tiebreak kind roomId={}",
+                        roomId);
+                    return;
+                  }
+                  if (!uid.equals(duel.xoTurnUid)) {
+                    log.warn(
+                        "sok tiebreaker_xo_move ignored: not your turn roomId={} uid={} turnUid={}",
+                        roomId,
+                        uid,
+                        duel.xoTurnUid);
+                    return;
+                  }
+                  if (!uid.equals(duel.attackerUid) && !uid.equals(duel.defenderUid)) {
+                    return;
+                  }
+                  if (cellIndex < 0 || cellIndex > 8) {
+                    log.warn(
+                        "sok tiebreaker_xo_move ignored: bad cell roomId={} cellIndex={}",
+                        roomId,
+                        cellIndex);
+                    return;
+                  }
+                  GameRuntimeConfig cfg = runtimeConfigService.get();
+                  XoTieBreakInteractionService.MoveOutcome mo =
+                      xoTieBreakInteractionService.applyMove(duel, uid, cellIndex, cfg);
+                  switch (mo.outcomeType()) {
+                    case INVALID_OCCUPIED:
+                      client.sendEvent("tiebreaker_xo_invalid", mapOf("reason", "occupied"));
+                      return;
+                    case ATTACKER_WIN:
+                      finishBattle(server, room, true, true, true, true, duel);
+                      return;
+                    case DEFENDER_WIN:
+                      finishBattle(server, room, false, true, true, true, duel);
+                      return;
+                    case DRAW_REPLAY:
+                      server
+                          .getRoomOperations(room.id)
+                          .sendEvent(
+                              "tiebreaker_xo_replay",
+                              XoTieBreakPayloadFactory.replayPayload(room.id, mo.replayNumber()));
+                      emitRoomUpdate(server, room);
+                      return;
+                    case DRAW_DEFENDER_WINS:
+                      finishBattle(server, room, false, true, true, true, duel);
+                      return;
+                    case CONTINUE:
+                      emitRoomUpdate(server, room);
+                      return;
+                    default:
+                      throw new IllegalStateException("Unhandled X-O outcome");
+                  }
+                }
+              });
         });
 
     server.addDisconnectListener(
@@ -823,19 +958,38 @@ public class SocketGateway implements DisposableBean {
     return MODE_FFA;
   }
 
-  private static int requiredPlayersToStart(RoomState room, GameRuntimeConfig cfg) {
-    if (room != null && MODE_TEAMS_2V2.equals(room.matchMode)) {
-      return 4;
-    }
-    return cfg.getMinPlayers();
+  /**
+   * Resolves the {@link GameMode} for a room via {@link GameModeRegistry}. Returns the default
+   * {@code sok_v1} mode whenever the room's {@code rulesetId} is missing or unknown.
+   */
+  private GameMode resolveMode(RoomState room) {
+    GameMode mode = gameModeRegistry.resolve(room == null ? null : room.rulesetId);
+    return mode == null ? defaultGameMode : mode;
   }
 
-  private static boolean sameTeam(RoomState room, String uidA, String uidB) {
+  /**
+   * Resolves the {@link ModeRules} currently in effect for a room, combining the mode's defaults
+   * with the room-specific {@code matchMode} so {@code TeamPolicy} is accurate.
+   */
+  private ModeRules resolveRules(RoomState room) {
+    GameMode mode = resolveMode(room);
+    if (mode instanceof DefaultGameMode dgm) {
+      return dgm.rulesFor(room == null ? null : room.matchMode);
+    }
+    return mode.rules();
+  }
+
+  private int requiredPlayersToStart(RoomState room, GameRuntimeConfig cfg) {
+    ModeRules rules = resolveRules(room);
+    int min = rules.minPlayersToStart();
+    return min > 0 ? min : Math.max(2, cfg.getMinPlayers());
+  }
+
+  private boolean sameTeam(RoomState room, String uidA, String uidB) {
     PlayerState a = room.playersByUid.get(uidA);
     PlayerState b = room.playersByUid.get(uidB);
     if (a == null || b == null) return false;
-    if (a.teamId == null || b.teamId == null) return false;
-    return a.teamId.equals(b.teamId);
+    return resolveRules(room).isFriendlyFire(a.teamId, b.teamId);
   }
 
   /**
@@ -874,6 +1028,40 @@ public class SocketGateway implements DisposableBean {
       }
     }
     return bestUid != null ? bestUid : room.players.get(0).uid;
+  }
+
+  private TieBreakerRealtimeBridge tieBreakerBridge(SocketIOServer server, RoomState room) {
+    return new TieBreakerRealtimeBridge() {
+      @Override
+      public String roomId() {
+        return room.id;
+      }
+
+      @Override
+      public void emitToRoom(String eventName, Map<String, Object> payload) {
+        server.getRoomOperations(room.id).sendEvent(eventName, payload);
+      }
+
+      @Override
+      public void scheduleRoomTimer(String timerKey, long delayMs, Runnable task) {
+        SocketGateway.this.scheduleTimer(room, timerKey, delayMs, task);
+      }
+
+      @Override
+      public void cancelRoomTimer(String timerKey) {
+        SocketGateway.this.cancelTimer(room, timerKey);
+      }
+
+      @Override
+      public GameRuntimeConfig configuration() {
+        return runtimeConfigService.get();
+      }
+
+      @Override
+      public QuestionEngineService questionEngine() {
+        return questionEngineService;
+      }
+    };
   }
 
   private void touchRoomRegistry(String roomId) {
@@ -1289,21 +1477,36 @@ public class SocketGateway implements DisposableBean {
     duel.defenderUid = target.ownerUid == null ? "neutral" : target.ownerUid;
     duel.targetRegionId = targetRegionId;
     if (tieBreakerAttack) {
-      duel.numericQuestion = questionEngineService.nextNumericQuestion();
-      server
-          .getRoomOperations(room.id)
-          .sendEvent(
-              "battle_tiebreaker_start",
-              questionEngineService.toClient(
-                  duel.numericQuestion, room.phaseStartedAt, cfg.getTiebreakDurationMs()));
-      scheduleTimer(
-          room,
-          "tiebreak_timeout",
-          cfg.getTiebreakDurationMs() + 50L,
-          new Runnable() {
+      String effective =
+          room.tieBreakOverride != null
+              ? room.tieBreakOverride
+              : TieBreakerModeIds.normalize(cfg.getTieBreakerMode());
+      room.tieBreakOverride = null;
+      if (TieBreakerModeIds.MINIGAME_XO.equals(effective) && "neutral".equals(duel.defenderUid)) {
+        effective = TieBreakerModeIds.NUMERIC_CLOSEST;
+      }
+      TieBreakerAttackPhaseStrategy strat =
+          tieBreakerAttackPhaseComposer.resolve(effective, duel.defenderUid);
+      strat.begin(
+          new TieBreakerAttackPhaseStrategy.BeginContext() {
             @Override
-            public void run() {
-              resolveTiebreaker(server, room);
+            public DuelState duel() {
+              return duel;
+            }
+
+            @Override
+            public TieBreakerRealtimeBridge bridge() {
+              return tieBreakerBridge(server, room);
+            }
+
+            @Override
+            public long phaseStartedAtMs() {
+              return room.phaseStartedAt;
+            }
+
+            @Override
+            public Runnable onNumericTiebreakDeadline() {
+              return () -> resolveTiebreaker(server, room);
             }
           });
     } else {
@@ -1359,13 +1562,32 @@ public class SocketGateway implements DisposableBean {
     boolean defenderCorrect =
         "neutral".equals(duel.defenderUid) ? false : defender != null && defender.answerIndex == duel.mcqQuestion.correctIndex;
 
+    GameRuntimeConfig cfgTb = runtimeConfigService.get();
     if (!"neutral".equals(duel.defenderUid)
         && attackerCorrect
         && defenderCorrect
         && attacker.timeTaken == defender.timeTaken) {
-      log.info("sok duel MCQ tie (same latency) → tiebreaker room={}", room.id);
-      startDuel(server, room, duel.attackerUid, duel.targetRegionId, true);
-      return;
+      log.info(
+          "sok duel MCQ tie (same latency) room={} tieBreakerMode={}",
+          room.id,
+          TieBreakerModeIds.normalize(cfgTb.getTieBreakerMode()));
+      McqSpeedTieOutcome outcome = mcqSpeedTieResolutionService.resolve(cfgTb, room.mcqSpeedTieRetries);
+      switch (outcome.action()) {
+        case FINISH_BATTLE:
+          finishBattle(server, room, outcome.attackerWinsIfFinishing(), true, true, false, duel);
+          return;
+        case RESTART_MCQ_DUEL:
+          room.mcqSpeedTieRetries = outcome.nextMcqRetryCount();
+          startDuel(server, room, duel.attackerUid, duel.targetRegionId, false);
+          return;
+        case ENTER_POST_MCQ_TIE_ATTACK:
+          if (outcome.resetMcqRetriesBeforeTieAttack()) {
+            room.mcqSpeedTieRetries = 0;
+          }
+          room.tieBreakOverride = outcome.tieBreakOverrideOrNull();
+          startDuel(server, room, duel.attackerUid, duel.targetRegionId, true);
+          return;
+      }
     }
 
     long a = attacker == null ? runtimeConfigService.get().getDuelDurationMs() : attacker.timeTaken;
@@ -1393,20 +1615,25 @@ public class SocketGateway implements DisposableBean {
       log.warn("sok resolveTiebreaker skipped roomId={} hasDuel={}", room.id, room.activeDuel != null);
       return;
     }
+    if (!"numeric".equals(room.activeDuel.tiebreakKind)) {
+      log.warn(
+          "sok resolveTiebreaker skipped non-numeric tiebreak kind={} roomId={}",
+          room.activeDuel.tiebreakKind,
+          room.id);
+      return;
+    }
     log.info("sok resolveTiebreaker roomId={}", room.id);
     DuelState duel = room.activeDuel;
-    autoFillTiebreaker(duel, runtimeConfigService.get().getTiebreakDurationMs());
+    TieBreakerAnswerAutofill.autofillTiebreaker(duel, runtimeConfigService.get().getTiebreakDurationMs());
     AnswerMetric a = duel.tiebreakerAnswers.get(duel.attackerUid);
     AnswerMetric d = duel.tiebreakerAnswers.get(duel.defenderUid);
-    if (d == null && "neutral".equals(duel.defenderUid)) {
+    boolean neutralDef = "neutral".equals(duel.defenderUid);
+    if (d == null && neutralDef) {
       finishBattle(server, room, true, true, false, true, duel);
       return;
     }
-    int ad = Math.abs(a.value - duel.numericQuestion.answer);
-    int dd = Math.abs(d.value - duel.numericQuestion.answer);
-    boolean attackerWins;
-    if (ad != dd) attackerWins = ad < dd;
-    else attackerWins = a.latencyMs <= d.latencyMs;
+    boolean attackerWins =
+        NumericTiebreakEvaluator.attackerWinsClosest(duel, a, d, neutralDef);
     finishBattle(server, room, attackerWins, true, true, true, duel);
   }
 
@@ -1421,6 +1648,8 @@ public class SocketGateway implements DisposableBean {
     if (duel == null) {
       return;
     }
+    room.mcqSpeedTieRetries = 0;
+    room.tieBreakOverride = null;
     if (attackerWins) {
       applyAttackerCapture(room, duel);
     }
@@ -1577,23 +1806,6 @@ public class SocketGateway implements DisposableBean {
     }
   }
 
-  private void autoFillTiebreaker(DuelState duel, int durationMs) {
-    if (!duel.tiebreakerAnswers.containsKey(duel.attackerUid)) {
-      AnswerMetric a = new AnswerMetric();
-      a.uid = duel.attackerUid;
-      a.value = 0;
-      a.latencyMs = durationMs;
-      duel.tiebreakerAnswers.put(a.uid, a);
-    }
-    if (!"neutral".equals(duel.defenderUid) && !duel.tiebreakerAnswers.containsKey(duel.defenderUid)) {
-      AnswerMetric d = new AnswerMetric();
-      d.uid = duel.defenderUid;
-      d.value = 0;
-      d.latencyMs = durationMs;
-      duel.tiebreakerAnswers.put(d.uid, d);
-    }
-  }
-
   private void scheduleTimer(RoomState room, String key, long delayMs, Runnable task) {
     cancelTimer(room, key);
     ScheduledFuture<?> future = scheduler.schedule(task, delayMs, TimeUnit.MILLISECONDS);
@@ -1680,6 +1892,16 @@ public class SocketGateway implements DisposableBean {
       duel.put("defenderUid", room.activeDuel.defenderUid);
       duel.put("targetHexId", room.activeDuel.targetRegionId);
       duel.put("question", room.activeDuel.mcqQuestion != null ? room.activeDuel.mcqQuestion.text : null);
+      duel.put("tiebreakKind", room.activeDuel.tiebreakKind);
+      if ("xo".equals(room.activeDuel.tiebreakKind) && room.activeDuel.xoCells != null) {
+        ArrayList<Integer> cells = new ArrayList<Integer>();
+        for (int v : room.activeDuel.xoCells) {
+          cells.add(v);
+        }
+        duel.put("xoCells", cells);
+        duel.put("xoTurnUid", room.activeDuel.xoTurnUid);
+        duel.put("xoReplayCount", room.activeDuel.xoReplayCount);
+      }
       payload.put("activeDuel", duel);
     }
     return payload;
@@ -1747,85 +1969,6 @@ public class SocketGateway implements DisposableBean {
     RegionState r = room.regions.get(regionId);
     if (r == null) return 1;
     return r.points <= 0 ? 1 : r.points;
-  }
-
-  private static class RoomState {
-    String id;
-    /** Mirrors client map registry id (e.g. Marefa basic_1v1_map). */
-    String mapId;
-    /** "ffa" or "teams_2v2". */
-    String matchMode;
-    /** Stable id for alternate rules / future game modules. */
-    String rulesetId;
-    List<PlayerState> players = new ArrayList<PlayerState>();
-    Map<String, PlayerState> playersByUid = new HashMap<String, PlayerState>();
-    Map<Integer, RegionState> regions = new HashMap<Integer, RegionState>();
-    String phase = PHASE_WAITING;
-    int currentTurnIndex = 0;
-    String hostUid;
-    String inviteCode;
-    int round = 1;
-    int roundAttackCount = 0;
-    DuelState activeDuel;
-    long createdAt;
-    long lastActivityAt;
-    long matchStartedAt;
-    long phaseStartedAt;
-    Map<String, Integer> scoreByUid = new HashMap<String, Integer>();
-    Map<String, Integer> claimPicksLeftByUid = new HashMap<String, Integer>();
-    List<String> claimQueue = new ArrayList<String>();
-    String claimTurnUid;
-    Map<String, AnswerMetric> estimationAnswers = new HashMap<String, AnswerMetric>();
-    QuestionEngineService.NumericQuestion activeNumericQuestion;
-    Map<String, ScheduledFuture<?>> timers = new HashMap<String, ScheduledFuture<?>>();
-  }
-
-  private static class PlayerState {
-    String uid;
-    String name;
-    String socketId;
-    int castleHp;
-    Integer castleRegionId;
-    int score;
-    String color;
-    /** Null in FFA; "A" / "B" for teams_2v2. */
-    String teamId;
-    boolean isEliminated;
-    boolean online;
-    long lastSeenAt;
-    int trophies;
-    Long eliminatedAt;
-  }
-
-  private static class RegionState {
-    int id;
-    String ownerUid;
-    boolean isCastle;
-    boolean isShielded;
-    String type;
-    int points;
-    List<Integer> neighbors = new ArrayList<Integer>();
-  }
-
-  private static class DuelState {
-    String attackerUid;
-    String defenderUid;
-    int targetRegionId;
-    QuestionEngineService.McqQuestion mcqQuestion;
-    QuestionEngineService.NumericQuestion numericQuestion;
-    Map<String, DuelAnswer> answers = new HashMap<String, DuelAnswer>();
-    Map<String, AnswerMetric> tiebreakerAnswers = new HashMap<String, AnswerMetric>();
-  }
-
-  private static class DuelAnswer {
-    int answerIndex;
-    long timeTaken;
-  }
-
-  private static class AnswerMetric {
-    String uid;
-    int value;
-    long latencyMs;
   }
 
   @Override
