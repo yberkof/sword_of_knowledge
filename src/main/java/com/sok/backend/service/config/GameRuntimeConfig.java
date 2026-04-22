@@ -18,6 +18,26 @@ public class GameRuntimeConfig {
   private int maxMatchDurationSeconds = 1800;
   private int reconnectGraceSeconds = 90;
   private String defaultQuestionCategory = "general";
+  /** Sent on every room_update as mapId for Marefa map registry matching. */
+  private String defaultMapId = "basic_1v1_map";
+  /** Default match grouping: "ffa" or "teams_2v2" (teams require exactly four players). */
+  private String defaultMatchMode = "ffa";
+  /** Identifier for rule plugins / alternate game loops on the same socket protocol. */
+  private String defaultRulesetId = "sok_v1";
+  /**
+   * After an MCQ duel where both players are correct with identical latency:
+   * {@code numeric_closest} — estimation question (default); {@code mcq_retry} — extra MCQ round(s)
+   * then estimation; {@code attacker_advantage} — attacker wins immediately;
+   * {@code minigame_xo} — tic-tac-toe on a 3×3 grid;
+   * {@code minigame_avoid_bombs} — hidden-bomb hunt on a 3×3 grid (first to open 3 bombs loses).
+   */
+  private String tieBreakerMode = "numeric_closest";
+  /** Used only when tieBreakerMode is mcq_retry. */
+  private int maxMcqTieRetries = 2;
+  /** After a drawn X-O board, replay up to this many times before defender wins the duel. */
+  private int xoDrawMaxReplay = 1;
+  /** Window each player has to secretly place their 3 bombs in the avoid-bombs minigame. */
+  private int avoidBombsPlacementMs = 15000;
   private Map<String, Integer> regionPoints = new HashMap<String, Integer>();
   private Map<String, List<Integer>> neighbors = new HashMap<String, List<Integer>>();
 
@@ -77,6 +97,20 @@ public class GameRuntimeConfig {
   public void setReconnectGraceSeconds(int reconnectGraceSeconds) { this.reconnectGraceSeconds = reconnectGraceSeconds; }
   public String getDefaultQuestionCategory() { return defaultQuestionCategory; }
   public void setDefaultQuestionCategory(String defaultQuestionCategory) { this.defaultQuestionCategory = defaultQuestionCategory; }
+  public String getDefaultMapId() { return defaultMapId; }
+  public void setDefaultMapId(String defaultMapId) { this.defaultMapId = defaultMapId; }
+  public String getDefaultMatchMode() { return defaultMatchMode; }
+  public void setDefaultMatchMode(String defaultMatchMode) { this.defaultMatchMode = defaultMatchMode; }
+  public String getDefaultRulesetId() { return defaultRulesetId; }
+  public void setDefaultRulesetId(String defaultRulesetId) { this.defaultRulesetId = defaultRulesetId; }
+  public String getTieBreakerMode() { return tieBreakerMode; }
+  public void setTieBreakerMode(String tieBreakerMode) { this.tieBreakerMode = tieBreakerMode; }
+  public int getMaxMcqTieRetries() { return maxMcqTieRetries; }
+  public void setMaxMcqTieRetries(int maxMcqTieRetries) { this.maxMcqTieRetries = maxMcqTieRetries; }
+  public int getXoDrawMaxReplay() { return xoDrawMaxReplay; }
+  public void setXoDrawMaxReplay(int xoDrawMaxReplay) { this.xoDrawMaxReplay = xoDrawMaxReplay; }
+  public int getAvoidBombsPlacementMs() { return avoidBombsPlacementMs; }
+  public void setAvoidBombsPlacementMs(int avoidBombsPlacementMs) { this.avoidBombsPlacementMs = avoidBombsPlacementMs; }
   public Map<String, Integer> getRegionPoints() { return regionPoints; }
   public void setRegionPoints(Map<String, Integer> regionPoints) { this.regionPoints = regionPoints; }
   public Map<String, List<Integer>> getNeighbors() { return neighbors; }
