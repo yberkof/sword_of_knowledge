@@ -1,25 +1,21 @@
 package com.sok.backend.realtime;
 
-import com.corundumstudio.socketio.AuthorizationListener;
-import com.corundumstudio.socketio.AuthorizationResult;
-import com.corundumstudio.socketio.Configuration;
-import com.corundumstudio.socketio.HandshakeData;
-import com.corundumstudio.socketio.SocketConfig;
-import com.corundumstudio.socketio.SocketIOServer;
+import com.corundumstudio.socketio.*;
 import com.sok.backend.config.DevOriginUtil;
 import com.sok.backend.service.AuthTokenService;
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Component;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Bean;
 
-@Component
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+
+@org.springframework.context.annotation.Configuration
 @ConditionalOnProperty(name = "app.socket.enabled", havingValue = "true", matchIfMissing = true)
 public class SocketIoConfig implements InitializingBean, DisposableBean {
   private static final Logger log = LoggerFactory.getLogger(SocketIoConfig.class);
@@ -92,6 +88,12 @@ public class SocketIoConfig implements InitializingBean, DisposableBean {
         });
     this.socketServer = new SocketIOServer(config);
     socketGateway.register(socketServer, authTokenService, allowInsecureSocket);
+  }
+
+  /** Exposes the Netty Socket.IO server as a Spring bean (e.g. {@code RoomRehydrationService}). */
+  @Bean
+  public SocketIOServer socketIOServer() {
+    return socketServer;
   }
 
   @Override

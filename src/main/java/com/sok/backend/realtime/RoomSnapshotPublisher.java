@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 @Service
 @ConditionalOnBean(ScalingRedisClient.class)
 public class RoomSnapshotPublisher {
-  private static final int TTL_SECONDS = 300;
+  private static final int TTL_SECONDS = 600;
 
   private final ScalingRedisClient redis;
 

@@ -12,6 +12,7 @@ public final class TieBreakerModeIds {
   public static final String MCQ_RETRY = "mcq_retry";
   public static final String ATTACKER_ADVANTAGE = "attacker_advantage";
   public static final String MINIGAME_XO = "minigame_xo";
+  public static final String MINIGAME_AVOID_BOMBS = "minigame_avoid_bombs";
 
   /**
    * Normalizes user / config input to a known id; unknown values map to {@link #NUMERIC_CLOSEST}.
@@ -24,6 +25,7 @@ public final class TieBreakerModeIds {
     if (MCQ_RETRY.equals(t)) return MCQ_RETRY;
     if (ATTACKER_ADVANTAGE.equals(t)) return ATTACKER_ADVANTAGE;
     if (MINIGAME_XO.equals(t)) return MINIGAME_XO;
+    if (MINIGAME_AVOID_BOMBS.equals(t)) return MINIGAME_AVOID_BOMBS;
     return NUMERIC_CLOSEST;
   }
 }
