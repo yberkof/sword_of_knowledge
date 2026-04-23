@@ -4,6 +4,9 @@ import com.corundumstudio.socketio.SocketIOServer;
 import com.sok.backend.domain.game.tiebreaker.AvoidBombsTieBreakInteractionService;
 import com.sok.backend.domain.game.tiebreaker.AvoidBombsTieBreakPayloadFactory;
 import com.sok.backend.domain.game.tiebreaker.AvoidBombsTieBreakerAttackPhaseStrategy;
+import com.sok.backend.domain.game.tiebreaker.CollectionTieBreakService;
+import com.sok.backend.domain.game.tiebreaker.TieBreakerRealtimeBridge;
+import com.sok.backend.realtime.TieBreakMinigameScheduler;
 import com.sok.backend.persistence.ActiveRoomRepository;
 import com.sok.backend.persistence.ActiveRoomRow;
 import com.sok.backend.realtime.match.BattleOrchestrator;
@@ -53,6 +56,8 @@ public class RoomRehydrationService {
   private final RoomLifecycle roomLifecycle;
   private final RoomBroadcaster broadcaster;
   private final AvoidBombsTieBreakInteractionService avoidBombsInteraction;
+  private final CollectionTieBreakService collectionTieBreakService;
+  private final TieBreakMinigameScheduler tieBreakMinigameScheduler;
 
   public RoomRehydrationService(
       ActiveRoomRepository activeRoomRepository,
@@ -66,7 +71,9 @@ public class RoomRehydrationService {
       ClaimPhaseOrchestrator claimPhaseOrchestrator,
       RoomLifecycle roomLifecycle,
       RoomBroadcaster broadcaster,
-      AvoidBombsTieBreakInteractionService avoidBombsInteraction) {
+      AvoidBombsTieBreakInteractionService avoidBombsInteraction,
+      CollectionTieBreakService collectionTieBreakService,
+      @Lazy TieBreakMinigameScheduler tieBreakMinigameScheduler) {
     this.activeRoomRepository = activeRoomRepository;
     this.snapshotMapper = snapshotMapper;
     this.store = store;
@@ -79,6 +86,8 @@ public class RoomRehydrationService {
     this.roomLifecycle = roomLifecycle;
     this.broadcaster = broadcaster;
     this.avoidBombsInteraction = avoidBombsInteraction;
+    this.collectionTieBreakService = collectionTieBreakService;
+    this.tieBreakMinigameScheduler = tieBreakMinigameScheduler;
   }
 
   /**
@@ -272,6 +281,56 @@ public class RoomRehydrationService {
                         broadcaster.emitRoomUpdate(room);
                       }));
         }
+      }
+      if ("collection".equals(duel.tiebreakKind) && "pick".equals(duel.collectionSubPhase)) {
+        long pickEnd =
+            duel.collectionPickDeadlineAtMs != null
+                ? duel.collectionPickDeadlineAtMs
+                : room.phaseStartedAt + cfg.getCollectionPickMs();
+        long remainingPick = pickEnd - now + 50L;
+        final String rid = room.id;
+        if (remainingPick <= 0L) {
+          submitRoom(
+              rid,
+              () -> {
+                RoomState ro = store.get(rid);
+                if (ro == null || ro.activeDuel == null) return;
+                DuelState d = ro.activeDuel;
+                if (!"collection".equals(d.tiebreakKind) || !"pick".equals(d.collectionSubPhase)) {
+                  return;
+                }
+                TieBreakerRealtimeBridge bridge = battleOrchestrator.tieBreakerBridge(socketServer, ro);
+                collectionTieBreakService.onPickDeadline(d, bridge);
+                broadcaster.emitRoomUpdate(ro);
+              });
+        } else {
+          roomTimers.scheduleTimer(
+              room,
+              CollectionTieBreakService.COLLECTION_PICK_TIMER_KEY,
+              remainingPick,
+              () ->
+                  submitRoom(
+                      rid,
+                      () -> {
+                        RoomState ro = store.get(rid);
+                        if (ro == null || ro.activeDuel == null) return;
+                        DuelState d = ro.activeDuel;
+                        if (!"collection".equals(d.tiebreakKind)
+                            || !"pick".equals(d.collectionSubPhase)) {
+                          return;
+                        }
+                        TieBreakerRealtimeBridge bridge =
+                            battleOrchestrator.tieBreakerBridge(socketServer, ro);
+                        collectionTieBreakService.onPickDeadline(d, bridge);
+                        broadcaster.emitRoomUpdate(ro);
+                      }));
+        }
+      }
+      if ("rhythm".equals(duel.tiebreakKind)) {
+        tieBreakMinigameScheduler.scheduleRhythmRoundDeadline(room.id);
+      }
+      if ("memory".equals(duel.tiebreakKind) && "peek".equals(duel.memorySubPhase)) {
+        tieBreakMinigameScheduler.scheduleMemoryPeekEnd(room.id);
       }
     }
   }

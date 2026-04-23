@@ -115,5 +115,31 @@ public class RoomSnapshotDto {
     public Map<String, Boolean> avoidBombsPlaced = new HashMap<>();
     public Map<String, Integer> avoidBombsHitsBy = new HashMap<>();
     public String avoidBombsTurnUid;
+
+    public String collectionSubPhase;
+    public String collectionAttackerPick;
+    public String collectionDefenderPick;
+    public Long collectionPickDeadlineAtMs;
+
+    public int rpsAttackerWins;
+    public int rpsDefenderWins;
+    public String rpsPendingAttacker;
+    public String rpsPendingDefender;
+
+    public int rhythmRound;
+    public int[] rhythmSequence;
+    public Long rhythmRoundDeadlineAtMs;
+    public String rhythmPendingAttackerInput;
+    public String rhythmPendingDefenderInput;
+
+    public String memorySubPhase;
+    public int[] memoryPairByCell;
+    /** Same length as memory grid (36 cells), 1 = matched. */
+    public int[] memoryMatchedFlags;
+    public int memoryFirstPickIndex;
+    public String memoryTurnUid;
+    public int memoryAttackerPairs;
+    public int memoryDefenderPairs;
+    public Long memoryPeekEndsAtMs;
   }
 }

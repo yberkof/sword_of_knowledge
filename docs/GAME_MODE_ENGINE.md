@@ -251,3 +251,4 @@ Legacy references (still applicable):
 - [`SOCKET_PROTOCOL.md`](./SOCKET_PROTOCOL.md) — event-by-event wire spec.
 - [`GAME_FLOW.md`](./GAME_FLOW.md) — phase narrative.
 - [`AVOID_BOMBS_TIEBREAK.md`](./AVOID_BOMBS_TIEBREAK.md) — avoid-bombs minigame (`minigame_avoid_bombs`, `tiebreaker_avoid_bombs_*`).
+- [`TIEBREAK_COLLECTION.md`](./TIEBREAK_COLLECTION.md) — vote + sub-minigames (`minigame_collection`).

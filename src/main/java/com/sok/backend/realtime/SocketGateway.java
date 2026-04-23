@@ -8,6 +8,11 @@ import com.sok.backend.domain.game.tiebreaker.XoTieBreakPayloadFactory;
 import com.sok.backend.domain.game.tiebreaker.AvoidBombsTieBreakInteractionService;
 import com.sok.backend.domain.game.tiebreaker.AvoidBombsTieBreakPayloadFactory;
 import com.sok.backend.domain.game.tiebreaker.AvoidBombsTieBreakerAttackPhaseStrategy;
+import com.sok.backend.domain.game.tiebreaker.CollectionTieBreakService;
+import com.sok.backend.domain.game.tiebreaker.MemoryTieBreakInteractionService;
+import com.sok.backend.domain.game.tiebreaker.RhythmTieBreakInteractionService;
+import com.sok.backend.domain.game.tiebreaker.RpsTieBreakInteractionService;
+import com.sok.backend.domain.game.tiebreaker.TieBreakerRealtimeBridge;
 import com.sok.backend.domain.game.GameInputRules;
 import com.sok.backend.config.RealtimeScaleProperties;
 import com.sok.backend.service.AuthTokenService;
@@ -51,6 +56,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -81,6 +87,11 @@ public class SocketGateway implements DisposableBean {
   private final AtomicLong lastSnapshotTickMs = new AtomicLong(0L);
   private final XoTieBreakInteractionService xoTieBreakInteractionService;
   private final AvoidBombsTieBreakInteractionService avoidBombsTieBreakInteractionService;
+  private final CollectionTieBreakService collectionTieBreakService;
+  private final TieBreakMinigameScheduler tieBreakMinigameScheduler;
+  private final RpsTieBreakInteractionService rpsTieBreakInteractionService;
+  private final RhythmTieBreakInteractionService rhythmTieBreakInteractionService;
+  private final MemoryTieBreakInteractionService memoryTieBreakInteractionService;
   private final RoomClientSnapshotFactory snapshotFactory;
   private final CastlePlacementOrchestrator castlePlacement;
   private final ClaimPhaseOrchestrator claimPhase;
@@ -95,6 +106,11 @@ public class SocketGateway implements DisposableBean {
       RuntimeGameConfigService runtimeConfigService,
       XoTieBreakInteractionService xoTieBreakInteractionService,
       AvoidBombsTieBreakInteractionService avoidBombsTieBreakInteractionService,
+      CollectionTieBreakService collectionTieBreakService,
+      @Lazy TieBreakMinigameScheduler tieBreakMinigameScheduler,
+      RpsTieBreakInteractionService rpsTieBreakInteractionService,
+      RhythmTieBreakInteractionService rhythmTieBreakInteractionService,
+      MemoryTieBreakInteractionService memoryTieBreakInteractionService,
       RealtimeScaleProperties scale,
       ObjectProvider<RoomRegistryService> roomRegistry,
       RoomSnapshotCoordinator snapshotCoordinator,
@@ -118,6 +134,11 @@ public class SocketGateway implements DisposableBean {
     this.runtimeConfigService = runtimeConfigService;
     this.xoTieBreakInteractionService = xoTieBreakInteractionService;
     this.avoidBombsTieBreakInteractionService = avoidBombsTieBreakInteractionService;
+    this.collectionTieBreakService = collectionTieBreakService;
+    this.tieBreakMinigameScheduler = tieBreakMinigameScheduler;
+    this.rpsTieBreakInteractionService = rpsTieBreakInteractionService;
+    this.rhythmTieBreakInteractionService = rhythmTieBreakInteractionService;
+    this.memoryTieBreakInteractionService = memoryTieBreakInteractionService;
     this.snapshotFactory = snapshotFactory;
     this.scale = scale;
     this.roomRegistry = roomRegistry;
@@ -870,6 +891,126 @@ public class SocketGateway implements DisposableBean {
                   }
                 }
               });
+        });
+
+    server.addEventListener(
+        "tiebreaker_collection_pick",
+        JsonNode.class,
+        (client, payload, ack) -> {
+          validateUidOrDisconnect(client, payload);
+          String roomId = asString(payload, "roomId");
+          String uid = asString(payload, "uid");
+          String choice = payload.path("choice").asText("").trim().toLowerCase();
+          submitToRoom(
+              roomId,
+              new Runnable() {
+                @Override
+                public void run() {
+                  RoomState room = store.get(roomId);
+                  if (room == null || !PHASE_TIE.equals(room.phase) || room.activeDuel == null) {
+                    return;
+                  }
+                  DuelState duel = room.activeDuel;
+                  TieBreakerRealtimeBridge bridge = battle.tieBreakerBridge(server, room);
+                  collectionTieBreakService.submitPick(duel, uid, choice, bridge);
+                  emitRoomUpdate(server, room);
+                  snapshotCoordinator.snapshotDurable(room);
+                }
+              });
+        });
+
+    server.addEventListener(
+        "tiebreaker_rps_throw",
+        JsonNode.class,
+        (client, payload, ack) -> {
+          validateUidOrDisconnect(client, payload);
+          String roomId = asString(payload, "roomId");
+          String uid = asString(payload, "uid");
+          String hand = payload.path("hand").asText("");
+          submitToRoom(
+              roomId,
+              new Runnable() {
+                @Override
+                public void run() {
+                  RoomState room = store.get(roomId);
+                  if (room == null || !PHASE_TIE.equals(room.phase) || room.activeDuel == null) {
+                    return;
+                  }
+                  DuelState duel = room.activeDuel;
+                  RpsTieBreakInteractionService.MoveOutcome mo =
+                      rpsTieBreakInteractionService.submitThrow(duel, uid, hand);
+                  tieBreakMinigameScheduler.applyRpsOutcome(server, room, mo);
+                }
+              });
+        });
+
+    server.addEventListener(
+        "tiebreaker_rhythm_submit",
+        JsonNode.class,
+        (client, payload, ack) -> {
+          validateUidOrDisconnect(client, payload);
+          String roomId = asString(payload, "roomId");
+          String uid = asString(payload, "uid");
+          ArrayList<Integer> inputsList = new ArrayList<Integer>();
+          JsonNode arr = payload.path("inputs");
+          if (arr.isArray()) {
+            for (JsonNode n : arr) {
+              inputsList.add(n.asInt(-1));
+            }
+          }
+          int[] inputs = new int[inputsList.size()];
+          for (int i = 0; i < inputsList.size(); i++) inputs[i] = inputsList.get(i);
+          submitToRoom(
+              roomId,
+              new Runnable() {
+                @Override
+                public void run() {
+                  RoomState room = store.get(roomId);
+                  if (room == null || !PHASE_TIE.equals(room.phase) || room.activeDuel == null) {
+                    return;
+                  }
+                  DuelState duel = room.activeDuel;
+                  TieBreakerRealtimeBridge bridge = battle.tieBreakerBridge(server, room);
+                  RhythmTieBreakInteractionService.MoveOutcome mo =
+                      rhythmTieBreakInteractionService.submitReplay(duel, uid, inputs, bridge);
+                  roomTimers.cancelTimer(room, TieBreakMinigameScheduler.RHYTHM_ROUND_TIMER_KEY);
+                  tieBreakMinigameScheduler.applyRhythmOutcome(server, room, mo);
+                }
+              });
+        });
+
+    server.addEventListener(
+        "tiebreaker_memory_flip",
+        JsonNode.class,
+        (client, payload, ack) -> {
+          validateUidOrDisconnect(client, payload);
+          String roomId = asString(payload, "roomId");
+          String uid = asString(payload, "uid");
+          int cellIndex = payload.path("cellIndex").asInt(-1);
+          submitToRoom(
+              roomId,
+                  () -> {
+                    RoomState room = store.get(roomId);
+                    if (room == null || !PHASE_TIE.equals(room.phase) || room.activeDuel == null) {
+                      return;
+                    }
+                    DuelState duel = room.activeDuel;
+                    MemoryTieBreakInteractionService.FlipOutcome fo =
+                        memoryTieBreakInteractionService.flip(duel, uid, cellIndex);
+                    switch (fo.type()) {
+                      case INVALID_PHASE:
+                      case INVALID_PARTICIPANT:
+                      case INVALID_CELL:
+                      case NOT_YOUR_TURN:
+                      case CELL_ALREADY_MATCHED:
+                        client.sendEvent(
+                            "tiebreaker_memory_invalid", mapOf("reason", fo.type().name()));
+                        return;
+                      default:
+                        tieBreakMinigameScheduler.applyMemoryFlipOutcome(server, room, fo, true);
+                        break;
+                    }
+                  });
         });
 
     server.addDisconnectListener(
