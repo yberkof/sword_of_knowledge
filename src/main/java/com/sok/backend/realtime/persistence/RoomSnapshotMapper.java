@@ -9,6 +9,7 @@ import com.sok.backend.realtime.match.DuelState;
 import com.sok.backend.realtime.match.PlayerState;
 import com.sok.backend.realtime.match.RegionState;
 import com.sok.backend.realtime.match.RoomState;
+import com.sok.backend.domain.game.tiebreaker.MemoryTieBreakRules;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -308,6 +309,29 @@ public class RoomSnapshotMapper {
     d.avoidBombsPlaced.putAll(duel.avoidBombsPlaced);
     d.avoidBombsHitsBy.putAll(duel.avoidBombsHitsBy);
     d.avoidBombsTurnUid = duel.avoidBombsTurnUid;
+
+    d.collectionSubPhase = duel.collectionSubPhase;
+    d.collectionAttackerPick = duel.collectionAttackerPick;
+    d.collectionDefenderPick = duel.collectionDefenderPick;
+    d.collectionPickDeadlineAtMs = duel.collectionPickDeadlineAtMs;
+    d.rpsAttackerWins = duel.rpsAttackerWins;
+    d.rpsDefenderWins = duel.rpsDefenderWins;
+    d.rpsPendingAttacker = duel.rpsPendingAttacker;
+    d.rpsPendingDefender = duel.rpsPendingDefender;
+    d.rhythmRound = duel.rhythmRound;
+    d.rhythmSequence = duel.rhythmSequence == null ? null : duel.rhythmSequence.clone();
+    d.rhythmRoundDeadlineAtMs = duel.rhythmRoundDeadlineAtMs;
+    d.rhythmPendingAttackerInput = duel.rhythmPendingAttackerInput;
+    d.rhythmPendingDefenderInput = duel.rhythmPendingDefenderInput;
+    d.memorySubPhase = duel.memorySubPhase;
+    d.memoryPairByCell =
+        duel.memoryPairByCell == null ? null : duel.memoryPairByCell.clone();
+    d.memoryMatchedFlags = memoryMatchedToFlags(duel.memoryMatched);
+    d.memoryFirstPickIndex = duel.memoryFirstPickIndex;
+    d.memoryTurnUid = duel.memoryTurnUid;
+    d.memoryAttackerPairs = duel.memoryAttackerPairs;
+    d.memoryDefenderPairs = duel.memoryDefenderPairs;
+    d.memoryPeekEndsAtMs = duel.memoryPeekEndsAtMs;
     return d;
   }
 
@@ -355,6 +379,47 @@ public class RoomSnapshotMapper {
     duel.avoidBombsHitsBy =
         d.avoidBombsHitsBy == null ? new HashMap<>() : new HashMap<>(d.avoidBombsHitsBy);
     duel.avoidBombsTurnUid = d.avoidBombsTurnUid;
+
+    duel.collectionSubPhase = d.collectionSubPhase;
+    duel.collectionAttackerPick = d.collectionAttackerPick;
+    duel.collectionDefenderPick = d.collectionDefenderPick;
+    duel.collectionPickDeadlineAtMs = d.collectionPickDeadlineAtMs;
+    duel.rpsAttackerWins = d.rpsAttackerWins;
+    duel.rpsDefenderWins = d.rpsDefenderWins;
+    duel.rpsPendingAttacker = d.rpsPendingAttacker;
+    duel.rpsPendingDefender = d.rpsPendingDefender;
+    duel.rhythmRound = d.rhythmRound;
+    duel.rhythmSequence = d.rhythmSequence == null ? null : d.rhythmSequence.clone();
+    duel.rhythmRoundDeadlineAtMs = d.rhythmRoundDeadlineAtMs;
+    duel.rhythmPendingAttackerInput = d.rhythmPendingAttackerInput;
+    duel.rhythmPendingDefenderInput = d.rhythmPendingDefenderInput;
+    duel.memorySubPhase = d.memorySubPhase;
+    duel.memoryPairByCell =
+        d.memoryPairByCell == null ? null : d.memoryPairByCell.clone();
+    duel.memoryMatched = flagsToMemoryMatched(d.memoryMatchedFlags);
+    duel.memoryFirstPickIndex = d.memoryFirstPickIndex;
+    duel.memoryTurnUid = d.memoryTurnUid;
+    duel.memoryAttackerPairs = d.memoryAttackerPairs;
+    duel.memoryDefenderPairs = d.memoryDefenderPairs;
+    duel.memoryPeekEndsAtMs = d.memoryPeekEndsAtMs;
     return duel;
+  }
+
+  private static int[] memoryMatchedToFlags(boolean[] matched) {
+    if (matched == null) return null;
+    int[] out = new int[matched.length];
+    for (int i = 0; i < matched.length; i++) {
+      out[i] = matched[i] ? 1 : 0;
+    }
+    return out;
+  }
+
+  private static boolean[] flagsToMemoryMatched(int[] flags) {
+    if (flags == null) return null;
+    boolean[] out = new boolean[MemoryTieBreakRules.GRID_CELLS];
+    for (int i = 0; i < flags.length && i < out.length; i++) {
+      out[i] = flags[i] != 0;
+    }
+    return out;
   }
 }

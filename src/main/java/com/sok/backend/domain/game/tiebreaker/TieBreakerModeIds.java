@@ -13,6 +13,8 @@ public final class TieBreakerModeIds {
   public static final String ATTACKER_ADVANTAGE = "attacker_advantage";
   public static final String MINIGAME_XO = "minigame_xo";
   public static final String MINIGAME_AVOID_BOMBS = "minigame_avoid_bombs";
+  /** Lobby that lets both players vote, then plays one sub-minigame. */
+  public static final String MINIGAME_COLLECTION = "minigame_collection";
 
   /**
    * Normalizes user / config input to a known id; unknown values map to {@link #NUMERIC_CLOSEST}.
@@ -26,6 +28,7 @@ public final class TieBreakerModeIds {
     if (ATTACKER_ADVANTAGE.equals(t)) return ATTACKER_ADVANTAGE;
     if (MINIGAME_XO.equals(t)) return MINIGAME_XO;
     if (MINIGAME_AVOID_BOMBS.equals(t)) return MINIGAME_AVOID_BOMBS;
+    if (MINIGAME_COLLECTION.equals(t)) return MINIGAME_COLLECTION;
     return NUMERIC_CLOSEST;
   }
 }

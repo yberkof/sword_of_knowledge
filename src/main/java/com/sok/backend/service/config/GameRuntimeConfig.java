@@ -29,15 +29,22 @@ public class GameRuntimeConfig {
    * {@code numeric_closest} — estimation question (default); {@code mcq_retry} — extra MCQ round(s)
    * then estimation; {@code attacker_advantage} — attacker wins immediately;
    * {@code minigame_xo} — tic-tac-toe on a 3×3 grid;
-   * {@code minigame_avoid_bombs} — hidden-bomb hunt on a 3×3 grid (first to open 3 bombs loses).
+   * {@code minigame_avoid_bombs} — hidden-bomb hunt on a 3×3 grid (first to open 3 bombs loses);
+   * {@code minigame_collection} — players vote then play one sub-minigame (avoid bombs, RPS, rhythm, memory).
    */
-  private String tieBreakerMode = "numeric_closest";
+  /** Default: vote lobby then one sub-minigame (see {@code minigame_collection}). */
+  private String tieBreakerMode = "minigame_collection";
   /** Used only when tieBreakerMode is mcq_retry. */
   private int maxMcqTieRetries = 2;
   /** After a drawn X-O board, replay up to this many times before defender wins the duel. */
   private int xoDrawMaxReplay = 1;
   /** Window each player has to secretly place their 3 bombs in the avoid-bombs minigame. */
   private int avoidBombsPlacementMs = 15000;
+  /** Votes for sub-minigame in collection tie-break. */
+  private int collectionPickMs = 20000;
+  private int memoryPeekMs = 10000;
+  private int rhythmTimeoutBaseMs = 15000;
+  private int rhythmTimeoutExtraPerRoundMs = 1000;
   private Map<String, Integer> regionPoints = new HashMap<String, Integer>();
   private Map<String, List<Integer>> neighbors = new HashMap<String, List<Integer>>();
 
@@ -111,6 +118,20 @@ public class GameRuntimeConfig {
   public void setXoDrawMaxReplay(int xoDrawMaxReplay) { this.xoDrawMaxReplay = xoDrawMaxReplay; }
   public int getAvoidBombsPlacementMs() { return avoidBombsPlacementMs; }
   public void setAvoidBombsPlacementMs(int avoidBombsPlacementMs) { this.avoidBombsPlacementMs = avoidBombsPlacementMs; }
+  public int getCollectionPickMs() { return collectionPickMs; }
+  public void setCollectionPickMs(int collectionPickMs) { this.collectionPickMs = collectionPickMs; }
+  public int getMemoryPeekMs() { return memoryPeekMs; }
+  public void setMemoryPeekMs(int memoryPeekMs) { this.memoryPeekMs = memoryPeekMs; }
+  public int getRhythmTimeoutBaseMs() { return rhythmTimeoutBaseMs; }
+  public void setRhythmTimeoutBaseMs(int rhythmTimeoutBaseMs) {
+    this.rhythmTimeoutBaseMs = rhythmTimeoutBaseMs;
+  }
+  public int getRhythmTimeoutExtraPerRoundMs() {
+    return rhythmTimeoutExtraPerRoundMs;
+  }
+  public void setRhythmTimeoutExtraPerRoundMs(int rhythmTimeoutExtraPerRoundMs) {
+    this.rhythmTimeoutExtraPerRoundMs = rhythmTimeoutExtraPerRoundMs;
+  }
   public Map<String, Integer> getRegionPoints() { return regionPoints; }
   public void setRegionPoints(Map<String, Integer> regionPoints) { this.regionPoints = regionPoints; }
   public Map<String, List<Integer>> getNeighbors() { return neighbors; }

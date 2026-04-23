@@ -133,7 +133,8 @@ public class BattleOrchestrator {
       room.tieBreakOverride = null;
       boolean needsHumanDefender =
           TieBreakerModeIds.MINIGAME_XO.equals(effective)
-              || TieBreakerModeIds.MINIGAME_AVOID_BOMBS.equals(effective);
+              || TieBreakerModeIds.MINIGAME_AVOID_BOMBS.equals(effective)
+              || TieBreakerModeIds.MINIGAME_COLLECTION.equals(effective);
       if (needsHumanDefender && "neutral".equals(duel.defenderUid)) {
         effective = TieBreakerModeIds.NUMERIC_CLOSEST;
       }
