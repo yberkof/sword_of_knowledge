@@ -70,7 +70,7 @@ public class SocketGateway implements DisposableBean {
   private static final String PHASE_TIE = "battle_tiebreaker";
 
   private static final List<String> PLAYER_COLORS =
-      Arrays.asList("#C41E3A", "#228B22", "#1E90FF", "#9333EA", "#F59E0B", "#14B8A6", "#8B5CF6", "#EC4899");
+      Arrays.asList("green", "blue", "red", "yellow", "purple", "orange", "teal", "pink");
 
   private final GameInputRules gameInputRules;
   private final RuntimeGameConfigService runtimeConfigService;
