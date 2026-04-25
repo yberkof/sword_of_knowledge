@@ -356,6 +356,9 @@ public class SocketGateway implements DisposableBean {
               if (!room.regions.containsKey(regionId)) return;
               RegionState region = room.regions.get(regionId);
               if (region.ownerUid != null) return;
+              if (room.currentTurnIndex < 0 || room.currentTurnIndex >= room.players.size()) return;
+              if (!room.players.get(room.currentTurnIndex).uid.equals(uid)) return;
+
               PlayerState p = room.playersByUid.get(uid);
               if (p == null || p.castleRegionId != null) return;
               region.ownerUid = uid;
@@ -363,6 +366,7 @@ public class SocketGateway implements DisposableBean {
               p.castleRegionId = regionId;
               p.score += pointValue(room, regionId);
               room.scoreByUid.put(uid, p.score);
+              battle.advanceTurnSkipEliminated(room);
               emitRoomUpdate(server, room);
               if (allPlayersPlacedCastle(room)) {
                 startClaimingQuestionRound(server, room);
