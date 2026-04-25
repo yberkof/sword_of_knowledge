@@ -89,6 +89,7 @@ public class RoomClientSnapshotFactory {
       row.put("isShielded", h.isShielded);
       row.put("type", h.type);
       row.put("points", h.points);
+      row.put("neighbors", h.neighbors);
       out.add(row);
     }
     return out;

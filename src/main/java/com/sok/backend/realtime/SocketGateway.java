@@ -507,6 +507,11 @@ public class SocketGateway implements DisposableBean {
                     r == null ? null : r.ownerUid);
                 return;
               }
+              if (!canAttackRegion(room, uid, regionId)) {
+                log.warn("sok claim_region rejected: not adjacent roomId={} uid={} regionId={}", roomId, uid, regionId);
+                client.sendEvent("claim_rejected", mapOf("reason", "not_adjacent"));
+                return;
+              }
               r.ownerUid = uid;
               PlayerState p = room.playersByUid.get(uid);
               p.score += pointValue(room, regionId);

@@ -50,27 +50,19 @@ public class GameRuntimeConfig {
 
   public static GameRuntimeConfig withDefaults() {
     GameRuntimeConfig cfg = new GameRuntimeConfig();
-    for (int i = 0; i < 13; i++) cfg.regionPoints.put(String.valueOf(i), 1);
-    cfg.regionPoints.put("6", 2);
-    cfg.regionPoints.put("7", 2);
-    cfg.regionPoints.put("8", 2);
-    cfg.regionPoints.put("9", 2);
-    cfg.regionPoints.put("10", 3);
-    cfg.regionPoints.put("11", 3);
-    cfg.regionPoints.put("12", 3);
-    cfg.neighbors.put("0", list(1, 5));
-    cfg.neighbors.put("1", list(0, 2, 5, 6));
-    cfg.neighbors.put("2", list(1, 3, 6, 7));
-    cfg.neighbors.put("3", list(2, 4, 7, 8));
-    cfg.neighbors.put("4", list(3, 8, 9));
-    cfg.neighbors.put("5", list(0, 1, 6));
-    cfg.neighbors.put("6", list(1, 2, 5, 7, 10));
-    cfg.neighbors.put("7", list(2, 3, 6, 8, 10, 11));
-    cfg.neighbors.put("8", list(3, 4, 7, 9, 11, 12));
-    cfg.neighbors.put("9", list(4, 8, 12));
-    cfg.neighbors.put("10", list(6, 7, 11));
-    cfg.neighbors.put("11", list(7, 8, 10, 12));
-    cfg.neighbors.put("12", list(8, 9, 11));
+    // Neutral hexes 1, 4, 5 (1pt) and 6, 7, 8 (2pt)
+    for (int i = 1; i <= 8; i++) cfg.regionPoints.put(String.valueOf(i), 1);
+    cfg.regionPoints.put("5", 2);
+
+    // Topology based on screenshot (Reciprocal/Bi-directional)
+    cfg.neighbors.put("1", list(3, 6));       // 1 touches Left Castle (now 3) and Forest (6)
+    cfg.neighbors.put("3", list(1, 4, 5));    // Left Castle (ID 3) touches 1, 4, 5
+    cfg.neighbors.put("2", list(7, 8, 5));    // Right Castle (ID 2) touches 7, 8, 5
+    cfg.neighbors.put("4", list(3, 5,8 ));       // 4 touches Left Castle (3) and Village (5)
+    cfg.neighbors.put("5", list(2, 3, 4, 6, 7, 8)); // Village touches everyone
+    cfg.neighbors.put("6", list(1, 5, 7));    // 6 touches 1, 5, 7
+    cfg.neighbors.put("7", list(2, 5, 6, 8)); // 7 touches Right Castle (2), 5, 6, 8
+    cfg.neighbors.put("8", list(2, 5, 4));    // 8 touches Right Castle (2), 5, 7
     return cfg;
   }
 

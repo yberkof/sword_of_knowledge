@@ -35,6 +35,10 @@ public class RuntimeGameConfigService {
 
   @Scheduled(fixedDelayString = "${app.game-config-refresh-ms:5000}")
   public void refresh() {
+    // Temporarily bypass database load to prioritize GameRuntimeConfig.java defaults
+    cache.set(GameRuntimeConfig.withDefaults());
+
+    /*
     try {
       GameRuntimeConfig next =
           repository
@@ -52,6 +56,7 @@ public class RuntimeGameConfigService {
     } catch (Exception ignored) {
       // keep last valid value
     }
+    */
   }
 
   private GameRuntimeConfig decode(String raw) {
