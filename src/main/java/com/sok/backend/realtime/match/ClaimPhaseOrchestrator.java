@@ -3,6 +3,7 @@ package com.sok.backend.realtime.match;
 import com.corundumstudio.socketio.SocketIOServer;
 import com.sok.backend.domain.game.ClaimingPhaseService;
 import com.sok.backend.domain.game.QuestionEngineService;
+import com.sok.backend.realtime.RoundLastSubmitEmitter;
 import com.sok.backend.realtime.persistence.RoomSnapshotCoordinator;
 import com.sok.backend.realtime.room.RoomBroadcaster;
 import com.sok.backend.realtime.room.RoomTimerScheduler;
@@ -30,6 +31,7 @@ public class ClaimPhaseOrchestrator {
   private final RoomBroadcaster broadcaster;
   private final RoomTimerScheduler roomTimers;
   private final RoomSnapshotCoordinator snapshotCoordinator;
+  private final RoundLastSubmitEmitter roundLastSubmitEmitter;
 
   public ClaimPhaseOrchestrator(
       QuestionEngineService questionEngineService,
@@ -37,13 +39,15 @@ public class ClaimPhaseOrchestrator {
       RuntimeGameConfigService runtimeConfigService,
       RoomBroadcaster broadcaster,
       RoomTimerScheduler roomTimers,
-      RoomSnapshotCoordinator snapshotCoordinator) {
+      RoomSnapshotCoordinator snapshotCoordinator,
+      RoundLastSubmitEmitter roundLastSubmitEmitter) {
     this.questionEngineService = questionEngineService;
     this.claimingPhaseService = claimingPhaseService;
     this.runtimeConfigService = runtimeConfigService;
     this.broadcaster = broadcaster;
     this.roomTimers = roomTimers;
     this.snapshotCoordinator = snapshotCoordinator;
+    this.roundLastSubmitEmitter = roundLastSubmitEmitter;
   }
 
   public void startClaimingQuestionRound(SocketIOServer server, RoomState room) {
@@ -122,6 +126,10 @@ public class ClaimPhaseOrchestrator {
     room.claimTurnUid = room.claimQueue.isEmpty() ? null : room.claimQueue.get(0);
     room.phase = PHASE_CLAIM_PICK;
     room.phaseStartedAt = System.currentTimeMillis();
+    if (!ranked.isEmpty()) {
+      roundLastSubmitEmitter.emit(
+          server, room, "estimation", ranked.get(0).uid, false, "estimation_resolved", null);
+    }
     HashMap<String, Object> rankings = new HashMap<>();
     rankings.put("rankings", rankedToPayload(ranked, room.activeNumericQuestion.answer));
     rankings.put("claimPicks", room.claimPicksLeftByUid);

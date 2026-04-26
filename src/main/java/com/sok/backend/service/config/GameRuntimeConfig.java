@@ -47,6 +47,11 @@ public class GameRuntimeConfig {
   private int rhythmTimeoutExtraPerRoundMs = 1000;
   private Map<String, Integer> regionPoints = new HashMap<String, Integer>();
   private Map<String, List<Integer>> neighbors = new HashMap<String, List<Integer>>();
+  /**
+   * When one player is left without a castle, server picks a random unclaimed region instead of
+   * waiting (AFK / disconnect safety).
+   */
+  private boolean autoPlaceLastUnplacedCastle = true;
 
   public static GameRuntimeConfig withDefaults() {
     GameRuntimeConfig cfg = new GameRuntimeConfig();
@@ -128,4 +133,8 @@ public class GameRuntimeConfig {
   public void setRegionPoints(Map<String, Integer> regionPoints) { this.regionPoints = regionPoints; }
   public Map<String, List<Integer>> getNeighbors() { return neighbors; }
   public void setNeighbors(Map<String, List<Integer>> neighbors) { this.neighbors = neighbors; }
+  public boolean isAutoPlaceLastUnplacedCastle() { return autoPlaceLastUnplacedCastle; }
+  public void setAutoPlaceLastUnplacedCastle(boolean autoPlaceLastUnplacedCastle) {
+    this.autoPlaceLastUnplacedCastle = autoPlaceLastUnplacedCastle;
+  }
 }

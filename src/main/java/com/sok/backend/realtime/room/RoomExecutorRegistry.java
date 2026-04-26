@@ -18,8 +18,9 @@ import org.springframework.beans.factory.DisposableBean;
 import org.springframework.stereotype.Component;
 
 /**
- * Per-room serialisation: every mutation for a given {@code roomId} runs on the shared worker pool
- * under a stable lock so listeners never race each other. Also owns pool metrics and lifecycle.
+ * Per-room serialisation: work for a given {@code roomId} runs on the shared pool, one task at a
+ * time per id under a stable {@code synchronized(lock)}. Do not read or write {@link RoomState} on
+ * other threads; route through {@link RoomSerialCommandService}.
  */
 @Component
 public class RoomExecutorRegistry implements DisposableBean {
