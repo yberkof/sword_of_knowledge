@@ -1,51 +1,25 @@
 package com.sok.backend.realtime;
 
 import com.corundumstudio.socketio.*;
-import com.sok.backend.config.DevOriginUtil;
 import com.sok.backend.service.AuthTokenService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
-import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-
 @org.springframework.context.annotation.Configuration
 @ConditionalOnProperty(name = "app.socket.enabled", havingValue = "true", matchIfMissing = true)
-public class SocketIoConfig implements InitializingBean, DisposableBean {
+public class SocketIoConfig implements DisposableBean {
   private static final Logger log = LoggerFactory.getLogger(SocketIoConfig.class);
   private final SocketIOServer socketServer;
-
-  /** Same idea as HTTP CORS: Next (3000) + Vite (5173) on localhost and 127.0.0.1. */
-  private static List<String> socketAllowedOrigins(String corsOriginsCsv) {
-    LinkedHashSet<String> set = new LinkedHashSet<String>();
-    for (String o : corsOriginsCsv.split(",")) {
-      String t = o.trim();
-      if (!t.isEmpty()) {
-        set.add(t);
-      }
-    }
-    set.add("http://localhost:3000");
-    set.add("http://127.0.0.1:3000");
-    set.add("http://localhost:5173");
-    set.add("http://127.0.0.1:5173");
-    return new ArrayList<String>(set);
-  }
 
   public SocketIoConfig(
       @Value("${app.socket.host}") String host,
       @Value("${app.socket.port}") int port,
-      @Value("${app.cors-origins:http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000}")
-          String corsOrigins,
       @Value("${app.socket.allow-insecure:false}") boolean allowInsecureSocket,
-      AuthTokenService authTokenService,
-      SocketGateway socketGateway) {
-    final List<String> allowedOrigins = socketAllowedOrigins(corsOrigins);
+      AuthTokenService authTokenService) {
     Configuration config = new Configuration();
     config.setHostname(host);
     config.setPort(port);
@@ -55,22 +29,13 @@ public class SocketIoConfig implements InitializingBean, DisposableBean {
       config.setSocketConfig(socketConfig);
     }
     socketConfig.setReuseAddress(true);
-    // netty-socketio sets this string verbatim as `Access-Control-Allow-Origin`; a comma-separated
-    // list is invalid (browser expects one origin or `*`). Real allowlist is enforced below.
+    // Browser CORS for the Socket.IO handshake: allow any origin (no Origin allowlist).
     config.setOrigin("*");
     config.setContext("/socket.io");
     config.setAuthorizationListener(
         new AuthorizationListener() {
           @Override
           public AuthorizationResult getAuthorizationResult(HandshakeData data) {
-            if (!allowedOrigins.isEmpty()) {
-              String origin = data.getHttpHeaders().get("Origin");
-              if (origin != null
-                  && !allowedOrigins.contains(origin)
-                  && !DevOriginUtil.isLocalPrivateDevOrigin(origin)) {
-                return AuthorizationResult.FAILED_AUTHORIZATION;
-              }
-            }
             if (allowInsecureSocket) {
               return AuthorizationResult.SUCCESSFUL_AUTHORIZATION;
             }
@@ -87,17 +52,14 @@ public class SocketIoConfig implements InitializingBean, DisposableBean {
           }
         });
     this.socketServer = new SocketIOServer(config);
-    socketGateway.register(socketServer, authTokenService, allowInsecureSocket);
+    // Server listen + handler registration: see {@link SocketGateway#registerHandlersAfterSocketBeanReady}.
   }
 
-  /** Exposes the Netty Socket.IO server as a Spring bean (e.g. {@code RoomRehydrationService}). */
-  @Bean
-  public SocketIOServer socketIOServer() {
-    return socketServer;
-  }
-
-  @Override
-  public void afterPropertiesSet() {
+  /**
+   * Starts accept after {@link SocketGateway} has registered all event listeners (order matters for
+   * incoming connections).
+   */
+  public static void startListening(SocketIOServer socketServer) {
     try {
       socketServer.start();
       Configuration cfg = socketServer.getConfiguration();
@@ -126,6 +88,12 @@ public class SocketIoConfig implements InitializingBean, DisposableBean {
       }
       throw e;
     }
+  }
+
+  /** Exposes the Netty Socket.IO server as a Spring bean (e.g. {@code RoomRehydrationService}). */
+  @Bean
+  public SocketIOServer socketIOServer() {
+    return socketServer;
   }
 
   @Override

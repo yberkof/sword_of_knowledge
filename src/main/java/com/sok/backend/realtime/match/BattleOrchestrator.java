@@ -339,6 +339,24 @@ public class BattleOrchestrator {
     result.put("correctIndex", duel.mcqQuestion != null ? duel.mcqQuestion.correctIndex : null);
     result.put("targetHexId", duel.targetRegionId);
 
+    DuelAnswer atkMcq = duel.answers.get(duel.attackerUid);
+    DuelAnswer defMcq =
+        "neutral".equals(duel.defenderUid) ? null : duel.answers.get(duel.defenderUid);
+    result.put("attackerAnswerIndex", atkMcq != null ? atkMcq.answerIndex : null);
+    result.put("defenderAnswerIndex", defMcq != null ? defMcq.answerIndex : null);
+
+    AnswerMetric atkEst =
+        duel.tiebreakerAnswers != null ? duel.tiebreakerAnswers.get(duel.attackerUid) : null;
+    AnswerMetric defEst =
+        duel.tiebreakerAnswers != null && !"neutral".equals(duel.defenderUid)
+            ? duel.tiebreakerAnswers.get(duel.defenderUid)
+            : null;
+    result.put("attackerEstimate", atkEst != null ? atkEst.value : null);
+    result.put("defenderEstimate", defEst != null ? defEst.value : null);
+    result.put(
+        "correctNumericAnswer",
+        duel.numericQuestion != null ? duel.numericQuestion.answer : null);
+
     HashMap<String, Object> payload = new HashMap<>();
     payload.put("room", snapshotFactory.roomToClient(room));
     payload.put("result", result);

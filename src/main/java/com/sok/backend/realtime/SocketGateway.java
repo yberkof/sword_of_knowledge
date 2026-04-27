@@ -13,7 +13,10 @@ import com.sok.backend.service.AuthTokenService;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.beans.factory.DisposableBean;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import javax.annotation.PostConstruct;
 
 /**
  * Composition root for Socket.IO: connect auth, domain {@link SocketEventBinder}s, background
@@ -30,8 +33,14 @@ public class SocketGateway implements DisposableBean {
   private final RoomLifecycle lifecycle;
   private final RoomExecutorRegistry roomExecutors;
   private final OnlinePlayerCountService onlinePlayerCountService;
+  private final SocketIOServer socketServer;
+  private final AuthTokenService authTokenService;
+  private final boolean allowInsecureSocket;
 
   public SocketGateway(
+      SocketIOServer socketServer,
+      AuthTokenService authTokenService,
+      @Value("${app.socket.allow-insecure:false}") boolean allowInsecureSocket,
       RoomBroadcaster broadcaster,
       SocketConnectHandshakeService connectHandshake,
       List<SocketEventBinder> eventBinders,
@@ -40,6 +49,9 @@ public class SocketGateway implements DisposableBean {
       RoomLifecycle lifecycle,
       RoomExecutorRegistry roomExecutors,
       OnlinePlayerCountService onlinePlayerCountService) {
+    this.socketServer = socketServer;
+    this.authTokenService = authTokenService;
+    this.allowInsecureSocket = allowInsecureSocket;
     this.broadcaster = broadcaster;
     this.connectHandshake = connectHandshake;
     this.eventBinders = eventBinders;
@@ -48,6 +60,12 @@ public class SocketGateway implements DisposableBean {
     this.lifecycle = lifecycle;
     this.roomExecutors = roomExecutors;
     this.onlinePlayerCountService = onlinePlayerCountService;
+  }
+
+  @PostConstruct
+  public void registerHandlersAfterSocketBeanReady() {
+    register(socketServer, authTokenService, allowInsecureSocket);
+    SocketIoConfig.startListening(socketServer);
   }
 
   public void register(

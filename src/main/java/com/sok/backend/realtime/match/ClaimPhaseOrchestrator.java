@@ -133,6 +133,8 @@ public class ClaimPhaseOrchestrator {
     HashMap<String, Object> rankings = new HashMap<>();
     rankings.put("rankings", rankedToPayload(ranked, room.activeNumericQuestion.answer));
     rankings.put("claimPicks", room.claimPicksLeftByUid);
+    rankings.put("correctAnswer", room.activeNumericQuestion.answer);
+    rankings.put("questionId", room.activeNumericQuestion.id);
     server.getRoomOperations(room.id).sendEvent("claim_rankings", rankings);
     broadcaster.emitRoomUpdate(room);
     snapshotCoordinator.snapshotDurable(room);
@@ -145,6 +147,7 @@ public class ClaimPhaseOrchestrator {
       HashMap<String, Object> row = new HashMap<>();
       row.put("uid", m.uid);
       row.put("rank", i + 1);
+      row.put("value", m.value);
       row.put("delta", Math.abs(m.value - correctAnswer));
       row.put("latencyMs", m.latencyMs);
       out.add(row);
