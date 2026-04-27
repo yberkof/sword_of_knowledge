@@ -54,8 +54,8 @@ public class GameRuntimeConfig {
    */
   private boolean autoPlaceLastUnplacedCastle = true;
   /**
-   * Auto castle placement (last AFK player): hex id per seat index (same order as {@code room.players},
-   * index 0 = first joined). JSON key {@code castle_indecies} — wire name kept as requested.
+   * Auto castle placement (last AFK player): ordered list of castle region ids; server picks the first
+   * id in this list whose hex is still empty. JSON key {@code castle_indecies} — wire name kept as requested.
    */
   private List<Integer> castleIndices = new ArrayList<Integer>();
 
