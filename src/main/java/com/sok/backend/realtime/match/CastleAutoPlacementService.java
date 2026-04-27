@@ -11,9 +11,10 @@ import java.util.Random;
 import org.springframework.stereotype.Component;
 
 /**
- * When exactly one non-eliminated player has not placed a castle, places on
- * {@code GameRuntimeConfig#castleIndices} ({@code castle_indecies} in JSON) for that seat when the
- * hex is free; otherwise picks a random free region. Same scoring as manual {@code place_castle}.
+ * When exactly one non-eliminated player has not placed a castle, walks
+ * {@code GameRuntimeConfig#castleIndices} ({@code castle_indecies} in JSON) in order and places on
+ * the first hex that is still empty; otherwise picks a random free region. Same scoring as manual
+ * {@code place_castle}.
  */
 @Component
 public class CastleAutoPlacementService {
@@ -41,20 +42,7 @@ public class CastleAutoPlacementService {
     if (pending == null) return;
     if (room.currentTurnIndex < 0 || room.currentTurnIndex >= room.players.size()) return;
     if (!room.players.get(room.currentTurnIndex).uid.equals(pending.uid)) return;
-    int pendingIdx = -1;
-    for (int i = 0; i < room.players.size(); i++) {
-      if (room.players.get(i) == pending) {
-        pendingIdx = i;
-        break;
-      }
-    }
-    Integer preferred = null;
-    if (pendingIdx >= 0
-        && cfgSnap.getCastleIndices() != null
-        && pendingIdx < cfgSnap.getCastleIndices().size()) {
-      preferred = cfgSnap.getCastleIndices().get(pendingIdx);
-    }
-    int regionId = resolveAutoCastleRegion(room, preferred);
+    int regionId = resolveAutoCastleRegion(room, cfgSnap.getCastleIndices());
     if (regionId < 0) return;
     RegionState region = room.regions.get(regionId);
     region.ownerUid = pending.uid;
@@ -78,14 +66,17 @@ public class CastleAutoPlacementService {
   }
 
   /**
-   * Uses configured hex when it exists, is empty, and is not already someone else's castle; otherwise
-   * picks a random free region (legacy behaviour).
+   * Uses the first configured castle hex that is still empty (in list order); otherwise picks a
+   * random free region.
    */
-  private int resolveAutoCastleRegion(RoomState room, Integer preferredHexId) {
-    if (preferredHexId != null) {
-      RegionState pref = room.regions.get(preferredHexId);
-      if (pref != null && pref.ownerUid == null && !pref.isCastle) {
-        return preferredHexId;
+  private int resolveAutoCastleRegion(RoomState room, List<Integer> castleIndices) {
+    if (castleIndices != null) {
+      for (Integer id : castleIndices) {
+        if (id == null) continue;
+        RegionState pref = room.regions.get(id);
+        if (pref != null && pref.ownerUid == null && !pref.isCastle) {
+          return id;
+        }
       }
     }
     List<Integer> free = new ArrayList<Integer>();
