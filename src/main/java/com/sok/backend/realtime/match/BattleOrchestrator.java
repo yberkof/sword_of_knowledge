@@ -11,6 +11,7 @@ import com.sok.backend.domain.game.tiebreaker.TieBreakerAttackPhaseComposer;
 import com.sok.backend.domain.game.tiebreaker.TieBreakerAttackPhaseStrategy;
 import com.sok.backend.domain.game.tiebreaker.TieBreakerModeIds;
 import com.sok.backend.domain.game.tiebreaker.TieBreakerRealtimeBridge;
+import com.sok.backend.realtime.RoundLastSubmitEmitter;
 import com.sok.backend.realtime.persistence.RoomSnapshotCoordinator;
 import com.sok.backend.realtime.room.RoomBroadcaster;
 import com.sok.backend.realtime.room.RoomClientSnapshotFactory;
@@ -46,6 +47,7 @@ public class BattleOrchestrator {
   private final RoomRulesResolver rulesResolver;
   private final MatchOutcomeService matchOutcome;
   private final RoomSnapshotCoordinator snapshotCoordinator;
+  private final RoundLastSubmitEmitter roundLastSubmitEmitter;
 
   public BattleOrchestrator(
       QuestionEngineService questionEngineService,
@@ -59,7 +61,8 @@ public class BattleOrchestrator {
       RoomExecutorRegistry executors,
       RoomRulesResolver rulesResolver,
       MatchOutcomeService matchOutcome,
-      RoomSnapshotCoordinator snapshotCoordinator) {
+      RoomSnapshotCoordinator snapshotCoordinator,
+      RoundLastSubmitEmitter roundLastSubmitEmitter) {
     this.questionEngineService = questionEngineService;
     this.battlePhaseService = battlePhaseService;
     this.mcqSpeedTieResolutionService = mcqSpeedTieResolutionService;
@@ -72,6 +75,7 @@ public class BattleOrchestrator {
     this.rulesResolver = rulesResolver;
     this.matchOutcome = matchOutcome;
     this.snapshotCoordinator = snapshotCoordinator;
+    this.roundLastSubmitEmitter = roundLastSubmitEmitter;
   }
 
   public void startBattlePhase(SocketIOServer server, RoomState room) {
@@ -335,11 +339,41 @@ public class BattleOrchestrator {
     result.put("correctIndex", duel.mcqQuestion != null ? duel.mcqQuestion.correctIndex : null);
     result.put("targetHexId", duel.targetRegionId);
 
+    DuelAnswer atkMcq = duel.answers.get(duel.attackerUid);
+    DuelAnswer defMcq =
+        "neutral".equals(duel.defenderUid) ? null : duel.answers.get(duel.defenderUid);
+    result.put("attackerAnswerIndex", atkMcq != null ? atkMcq.answerIndex : null);
+    result.put("defenderAnswerIndex", defMcq != null ? defMcq.answerIndex : null);
+
+    AnswerMetric atkEst =
+        duel.tiebreakerAnswers != null ? duel.tiebreakerAnswers.get(duel.attackerUid) : null;
+    AnswerMetric defEst =
+        duel.tiebreakerAnswers != null && !"neutral".equals(duel.defenderUid)
+            ? duel.tiebreakerAnswers.get(duel.defenderUid)
+            : null;
+    result.put("attackerEstimate", atkEst != null ? atkEst.value : null);
+    result.put("defenderEstimate", defEst != null ? defEst.value : null);
+    result.put(
+        "correctNumericAnswer",
+        duel.numericQuestion != null ? duel.numericQuestion.answer : null);
+
     HashMap<String, Object> payload = new HashMap<>();
     payload.put("room", snapshotFactory.roomToClient(room));
     payload.put("result", result);
     server.getRoomOperations(room.id).sendEvent("duel_resolved", payload);
     log.debug("finishBattle emitted duel_resolved room={}", room.id);
+    {
+      String kind = "duel_mcq";
+      if (tieBreakerMinigame) {
+        String tk = duel.tiebreakKind;
+        kind = (tk == null || tk.isEmpty()) ? "tiebreak" : "tiebreak_" + tk;
+      }
+      String w =
+          attackerWins
+              ? duel.attackerUid
+              : ("neutral".equals(duel.defenderUid) ? null : duel.defenderUid);
+      roundLastSubmitEmitter.emit(server, room, kind, w, false, "duel_resolved", null);
+    }
     broadcaster.emitRoomUpdate(room);
     snapshotCoordinator.snapshotDurable(room);
     matchOutcome.evaluateEndConditions(server, room);

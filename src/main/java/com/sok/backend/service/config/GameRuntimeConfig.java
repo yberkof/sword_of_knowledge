@@ -1,5 +1,6 @@
 package com.sok.backend.service.config;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -47,12 +48,24 @@ public class GameRuntimeConfig {
   private int rhythmTimeoutExtraPerRoundMs = 1000;
   private Map<String, Integer> regionPoints = new HashMap<String, Integer>();
   private Map<String, List<Integer>> neighbors = new HashMap<String, List<Integer>>();
+  /**
+   * When one player is left without a castle, server picks a random unclaimed region instead of
+   * waiting (AFK / disconnect safety).
+   */
+  private boolean autoPlaceLastUnplacedCastle = true;
+  /**
+   * Auto castle placement (last AFK player): hex id per seat index (same order as {@code room.players},
+   * index 0 = first joined). JSON key {@code castle_indecies} — wire name kept as requested.
+   */
+  private List<Integer> castleIndices = new ArrayList<Integer>();
 
   public static GameRuntimeConfig withDefaults() {
     GameRuntimeConfig cfg = new GameRuntimeConfig();
     // Neutral hexes 1, 4, 5 (1pt) and 6, 7, 8 (2pt)
     for (int i = 1; i <= 8; i++) cfg.regionPoints.put(String.valueOf(i), 1);
     cfg.regionPoints.put("5", 2);
+    // Default 1v1: left castle hex 3, right castle hex 2 (see neighbors comments below).
+    cfg.castleIndices = list(3, 2);
 
     // Topology based on screenshot (Reciprocal/Bi-directional)
     cfg.neighbors.put("1", list(3, 6));       // 1 touches Left Castle (now 3) and Forest (6)
@@ -128,4 +141,19 @@ public class GameRuntimeConfig {
   public void setRegionPoints(Map<String, Integer> regionPoints) { this.regionPoints = regionPoints; }
   public Map<String, List<Integer>> getNeighbors() { return neighbors; }
   public void setNeighbors(Map<String, List<Integer>> neighbors) { this.neighbors = neighbors; }
+  public boolean isAutoPlaceLastUnplacedCastle() { return autoPlaceLastUnplacedCastle; }
+  public void setAutoPlaceLastUnplacedCastle(boolean autoPlaceLastUnplacedCastle) {
+    this.autoPlaceLastUnplacedCastle = autoPlaceLastUnplacedCastle;
+  }
+
+  @JsonProperty("castle_indecies")
+  public List<Integer> getCastleIndices() {
+    return castleIndices;
+  }
+
+  @JsonProperty("castle_indecies")
+  public void setCastleIndices(List<Integer> castleIndices) {
+    this.castleIndices =
+        castleIndices == null ? new ArrayList<Integer>() : new ArrayList<Integer>(castleIndices);
+  }
 }

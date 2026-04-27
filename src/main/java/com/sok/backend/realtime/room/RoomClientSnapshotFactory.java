@@ -63,6 +63,9 @@ public class RoomClientSnapshotFactory {
       HashMap<String, Object> row = new HashMap<>();
       row.put("uid", p.uid);
       row.put("name", p.name);
+      if (p.avatarUrl != null && !p.avatarUrl.isEmpty()) {
+        row.put("avatarURL", p.avatarUrl);
+      }
       row.put("hp", p.castleHp);
       row.put("color", p.color);
       row.put("isCapitalLost", p.isEliminated);

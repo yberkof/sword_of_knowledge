@@ -8,6 +8,7 @@ import com.sok.backend.domain.game.tiebreaker.TieBreakerRealtimeBridge;
 import com.sok.backend.realtime.match.BattleOrchestrator;
 import com.sok.backend.realtime.match.DuelState;
 import com.sok.backend.realtime.match.RoomState;
+import com.sok.backend.realtime.RoundLastSubmitEmitter;
 import com.sok.backend.realtime.persistence.RoomSnapshotCoordinator;
 import com.sok.backend.realtime.room.RoomBroadcaster;
 import com.sok.backend.realtime.room.RoomExecutorRegistry;
@@ -38,6 +39,7 @@ public class TieBreakMinigameScheduler {
   private final MemoryTieBreakInteractionService memoryService;
   private final RoomBroadcaster broadcaster;
   private final RoomSnapshotCoordinator snapshotCoordinator;
+  private final RoundLastSubmitEmitter roundLastSubmitEmitter;
 
   public TieBreakMinigameScheduler(
       SocketIOServer socketServer,
@@ -48,7 +50,8 @@ public class TieBreakMinigameScheduler {
       RhythmTieBreakInteractionService rhythmService,
       MemoryTieBreakInteractionService memoryService,
       RoomBroadcaster broadcaster,
-      RoomSnapshotCoordinator snapshotCoordinator) {
+      RoomSnapshotCoordinator snapshotCoordinator,
+      RoundLastSubmitEmitter roundLastSubmitEmitter) {
     this.socketServer = socketServer;
     this.store = store;
     this.executors = executors;
@@ -58,6 +61,7 @@ public class TieBreakMinigameScheduler {
     this.memoryService = memoryService;
     this.broadcaster = broadcaster;
     this.snapshotCoordinator = snapshotCoordinator;
+    this.roundLastSubmitEmitter = roundLastSubmitEmitter;
   }
 
   public void scheduleRhythmRoundDeadline(String roomId) {
@@ -134,6 +138,8 @@ public class TieBreakMinigameScheduler {
     if (duel == null) return;
     switch (mo.type()) {
       case CONTINUE_NEXT_ROUND:
+        roundLastSubmitEmitter.emit(
+            server, room, "tiebreak_rhythm", null, false, "rhythm_next_round", null);
         broadcaster.emitRoomUpdate(room);
         snapshotCoordinator.snapshotDurable(room);
         scheduleRhythmRoundDeadline(room.id);
@@ -166,7 +172,18 @@ public class TieBreakMinigameScheduler {
       case WAITING_PEER:
       case ROUND_ATTACKER_POINT:
       case ROUND_DEFENDER_POINT:
-      case DRAW_ROUND:
+      case DRAW_ROUND: {
+        String w = null;
+        boolean tie = false;
+        if (mo.type() == RpsTieBreakInteractionService.OutcomeType.ROUND_ATTACKER_POINT) {
+          w = duel.attackerUid;
+        } else if (mo.type() == RpsTieBreakInteractionService.OutcomeType.ROUND_DEFENDER_POINT) {
+          w = duel.defenderUid;
+        } else if (mo.type() == RpsTieBreakInteractionService.OutcomeType.DRAW_ROUND) {
+          tie = true;
+        }
+        roundLastSubmitEmitter.emit(
+            server, room, "tiebreak_rps", w, tie, mo.type().name(), null);
         socketServer
             .getRoomOperations(room.id)
             .sendEvent(
@@ -176,6 +193,7 @@ public class TieBreakMinigameScheduler {
         broadcaster.emitRoomUpdate(room);
         snapshotCoordinator.snapshotDurable(room);
         break;
+      }
       default:
         broadcaster.emitRoomUpdate(room);
         snapshotCoordinator.snapshotDurable(room);
@@ -187,7 +205,8 @@ public class TieBreakMinigameScheduler {
       SocketIOServer server,
       RoomState room,
       MemoryTieBreakInteractionService.FlipOutcome fo,
-      boolean emitFlipPayload) {
+      boolean emitFlipPayload,
+      String actorUid) {
     DuelState duel = room.activeDuel;
     if (duel == null) return;
     switch (fo.type()) {
@@ -238,6 +257,8 @@ public class TieBreakMinigameScheduler {
                       fo.secondIndex(),
                       fo.revealedPairIds()));
         }
+        roundLastSubmitEmitter.emit(
+            server, room, "tiebreak_memory", null, false, fo.type().name(), actorUid);
         broadcaster.emitRoomUpdate(room);
         snapshotCoordinator.snapshotDurable(room);
         break;
