@@ -51,6 +51,8 @@ public class RoomSnapshotDto {
   public static class PlayerSnapshotDto {
     public String uid;
     public String name;
+    /** Profile image URL; persisted with room snapshot. */
+    public String avatarUrl;
     public int castleHp;
     public Integer castleRegionId;
     public int score;

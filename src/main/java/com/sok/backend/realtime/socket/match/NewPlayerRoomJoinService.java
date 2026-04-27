@@ -69,6 +69,7 @@ public class NewPlayerRoomJoinService {
       RoomState room,
       String uid,
       String finalName,
+      String avatarUrl,
       String joinMatchMode,
       String joinRulesetId,
       String joinMapId) {
@@ -92,6 +93,7 @@ public class NewPlayerRoomJoinService {
     PlayerState player = new PlayerState();
     player.uid = uid;
     player.name = finalName;
+    player.avatarUrl = avatarUrl;
     player.socketId = client.getSessionId().toString();
     player.online = true;
     player.lastSeenAt = System.currentTimeMillis();

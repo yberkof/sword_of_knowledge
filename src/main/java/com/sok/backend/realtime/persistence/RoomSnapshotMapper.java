@@ -134,6 +134,7 @@ public class RoomSnapshotMapper {
     RoomSnapshotDto.PlayerSnapshotDto d = new RoomSnapshotDto.PlayerSnapshotDto();
     d.uid = p.uid;
     d.name = p.name;
+    d.avatarUrl = p.avatarUrl;
     d.castleHp = p.castleHp;
     d.castleRegionId = p.castleRegionId;
     d.score = p.score;
@@ -149,6 +150,7 @@ public class RoomSnapshotMapper {
     PlayerState p = new PlayerState();
     p.uid = d.uid;
     p.name = d.name;
+    p.avatarUrl = d.avatarUrl;
     p.socketId = null;
     p.castleHp = d.castleHp;
     p.castleRegionId = d.castleRegionId;

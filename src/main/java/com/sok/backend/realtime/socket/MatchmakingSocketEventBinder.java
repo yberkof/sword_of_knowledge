@@ -94,6 +94,12 @@ public class MatchmakingSocketEventBinder implements SocketEventBinder {
       name = "Warrior";
     }
     final String finalName = name;
+    String avatarRaw = SocketEventPayloads.asString(payload, "avatarURL");
+    if (avatarRaw.trim().isEmpty()) {
+      avatarRaw = SocketEventPayloads.asString(payload, "avatarUrl");
+    }
+    final String joinAvatar =
+        avatarRaw.trim().isEmpty() ? null : avatarRaw.trim();
     final String joinMatchMode = payload.path("matchMode").asText("");
     final String joinRulesetId = payload.path("rulesetId").asText("");
     final String joinMapId = payload.path("mapId").asText("");
@@ -101,7 +107,7 @@ public class MatchmakingSocketEventBinder implements SocketEventBinder {
     String normalized = gameInputRules.normalizePrivateCode(privateCode);
 
     MatchRejoinService.RejoinResult rj =
-        matchRejoinService.rejoinIfApplicable(client, uid, server);
+        matchRejoinService.rejoinIfApplicable(client, uid, server, joinAvatar);
     if (rj == MatchRejoinService.RejoinResult.SERVER_BUSY) {
       client.sendEvent("join_rejected", mapOf("reason", "server_busy"));
       return;
@@ -126,7 +132,15 @@ public class MatchmakingSocketEventBinder implements SocketEventBinder {
         server,
         (s, room) ->
             newPlayerRoomJoin.runJoinIntoRoom(
-                client, s, room, uid, finalName, joinMatchMode, joinRulesetId, joinMapId))) {
+                client,
+                s,
+                room,
+                uid,
+                finalName,
+                joinAvatar,
+                joinMatchMode,
+                joinRulesetId,
+                joinMapId))) {
       rollback.rollbackOrphanWaitingRoom(assignedRoomId, allocation.brandNewEmpty());
       client.sendEvent("join_rejected", mapOf("reason", "server_busy"));
     }

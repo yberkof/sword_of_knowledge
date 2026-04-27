@@ -76,7 +76,8 @@ public class SocketRoomBackgroundService {
                 if (p == null) {
                   return;
                 }
-                if (GamePhases.WAITING.equals(room.phase)) {
+                if (GamePhases.WAITING.equals(room.phase)
+                    || RoomState.PHASE_ENDED.equals(room.phase)) {
                   lifecycle.removePlayerFromRoom(room, uid);
                   return;
                 }

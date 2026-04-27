@@ -42,7 +42,8 @@ public class MatchRejoinService {
     this.broadcaster = broadcaster;
   }
 
-  public RejoinResult rejoinIfApplicable(SocketIOClient client, String uid, SocketIOServer server) {
+  public RejoinResult rejoinIfApplicable(
+      SocketIOClient client, String uid, SocketIOServer server, String avatarUrl) {
     String resolved = store.roomIdForUid(uid);
     if (resolved == null) {
       resolved = activeRoomRepository.findRoomIdByUid(uid).orElse(null);
@@ -63,6 +64,9 @@ public class MatchRejoinService {
             p.socketId = client.getSessionId().toString();
             p.online = true;
             p.lastSeenAt = System.currentTimeMillis();
+            if (avatarUrl != null && !avatarUrl.isEmpty()) {
+              p.avatarUrl = avatarUrl;
+            }
           }
           client.joinRoom(existingRoomId);
           broadcaster.emitRoomUpdate(room);

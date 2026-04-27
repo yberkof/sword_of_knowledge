@@ -7,6 +7,8 @@ package com.sok.backend.realtime.match;
 public class PlayerState {
   public String uid;
   public String name;
+  /** Optional profile image URL for clients (HUD). */
+  public String avatarUrl;
   public String socketId;
   public int castleHp;
   public Integer castleRegionId;
