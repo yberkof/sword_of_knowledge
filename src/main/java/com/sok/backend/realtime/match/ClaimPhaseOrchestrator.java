@@ -56,8 +56,9 @@ public class ClaimPhaseOrchestrator {
     room.claimPicksLeftByUid.clear();
     room.claimQueue.clear();
     room.estimationAnswers.clear();
-    room.activeNumericQuestion = questionEngineService.nextNumericQuestion();
     GameRuntimeConfig cfg = runtimeConfigService.get();
+    room.activeNumericQuestion =
+        questionEngineService.nextNumericQuestion(cfg.getDefaultQuestionCategory());
     server
         .getRoomOperations(room.id)
         .sendEvent(
