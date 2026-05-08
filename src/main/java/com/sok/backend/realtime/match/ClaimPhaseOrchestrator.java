@@ -58,18 +58,23 @@ public class ClaimPhaseOrchestrator {
     room.estimationAnswers.clear();
     room.activeNumericQuestion = questionEngineService.nextNumericQuestion();
     GameRuntimeConfig cfg = runtimeConfigService.get();
+    HashMap<String, Object> phasePayload = new HashMap<>();
+    phasePayload.put("phase", PHASE_CLAIM_Q);
+    server.getRoomOperations(room.id).sendEvent("phase_changed", phasePayload);
+    broadcaster.emitRoomUpdate(room);
+
     server
         .getRoomOperations(room.id)
         .sendEvent(
             "estimation_question",
             questionEngineService.toClient(
                 room.activeNumericQuestion, room.phaseStartedAt, cfg.getClaimDurationMs()));
+
     roomTimers.scheduleTimer(
         room,
         TIMER_CLAIM_Q,
         cfg.getClaimDurationMs() + 50L,
         () -> resolveEstimationRound(server, room));
-    broadcaster.emitRoomUpdate(room);
     snapshotCoordinator.snapshotDurable(room);
   }
 
