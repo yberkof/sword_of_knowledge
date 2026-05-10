@@ -1,5 +1,7 @@
 package com.sok.backend.api;
 
+import com.sok.backend.persistence.NumericQuestionRepository;
+import com.sok.backend.persistence.QuestionRepository;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Collections;
@@ -12,9 +14,21 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/cms")
 public class CmsController {
+  private final QuestionRepository questionRepository;
+  private final NumericQuestionRepository numericQuestionRepository;
+
+  public CmsController(
+      QuestionRepository questionRepository, NumericQuestionRepository numericQuestionRepository) {
+    this.questionRepository = questionRepository;
+    this.numericQuestionRepository = numericQuestionRepository;
+  }
+
   @GetMapping("/questions-stats")
   public Map<String, Integer> questionsStats() {
-    return Collections.singletonMap("count", -1);
+    HashMap<String, Integer> out = new HashMap<>();
+    out.put("count", questionRepository.countActive());
+    out.put("numericCount", numericQuestionRepository.countActive());
+    return out;
   }
 
   @PostMapping("/report")

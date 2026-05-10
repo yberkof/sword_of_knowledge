@@ -25,8 +25,9 @@ public class NumericClosestTieBreakerAttackPhaseStrategy implements TieBreakerAt
     DuelState duel = ctx.duel();
     TieBreakerRealtimeBridge b = ctx.bridge();
     duel.tiebreakKind = "numeric";
-    duel.numericQuestion = b.questionEngine().nextNumericQuestion();
     GameRuntimeConfig cfg = b.configuration();
+    duel.numericQuestion =
+        b.questionEngine().nextNumericQuestion(cfg.getDefaultQuestionCategory());
     Map<String, Object> payload =
         b.questionEngine()
             .toClient(duel.numericQuestion, ctx.phaseStartedAtMs(), cfg.getTiebreakDurationMs());
