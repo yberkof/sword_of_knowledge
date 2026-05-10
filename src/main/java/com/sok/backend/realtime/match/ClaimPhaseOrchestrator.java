@@ -1,5 +1,14 @@
 package com.sok.backend.realtime.match;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
 import com.corundumstudio.socketio.SocketIOServer;
 import com.sok.backend.domain.game.ClaimingPhaseService;
 import com.sok.backend.domain.game.QuestionEngineService;
@@ -9,13 +18,6 @@ import com.sok.backend.realtime.room.RoomBroadcaster;
 import com.sok.backend.realtime.room.RoomTimerScheduler;
 import com.sok.backend.service.config.GameRuntimeConfig;
 import com.sok.backend.service.config.RuntimeGameConfigService;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
 
 /** Handles the claim (estimation + pick) phase lifecycle. */
 @Component
@@ -57,6 +59,11 @@ public class ClaimPhaseOrchestrator {
     room.claimQueue.clear();
     room.estimationAnswers.clear();
     GameRuntimeConfig cfg = runtimeConfigService.get();
+    HashMap<String, Object> phasePayload = new HashMap<>();
+    phasePayload.put("phase", PHASE_CLAIM_Q);
+    server.getRoomOperations(room.id).sendEvent("phase_changed", phasePayload);
+    broadcaster.emitRoomUpdate(room);
+
     room.activeNumericQuestion =
         questionEngineService.nextNumericQuestion(cfg.getDefaultQuestionCategory());
     server
@@ -65,12 +72,12 @@ public class ClaimPhaseOrchestrator {
             "estimation_question",
             questionEngineService.toClient(
                 room.activeNumericQuestion, room.phaseStartedAt, cfg.getClaimDurationMs()));
+
     roomTimers.scheduleTimer(
         room,
         TIMER_CLAIM_Q,
         cfg.getClaimDurationMs() + 50L,
         () -> resolveEstimationRound(server, room));
-    broadcaster.emitRoomUpdate(room);
     snapshotCoordinator.snapshotDurable(room);
   }
 
@@ -85,15 +92,13 @@ public class ClaimPhaseOrchestrator {
         room.id,
         room.phase,
         room.estimationAnswers.size());
-    if (room.estimationAnswers.isEmpty()) {
-      for (PlayerState p : room.players) {
-        if (!p.isEliminated && p.online) {
-          AnswerMetric m = new AnswerMetric();
-          m.uid = p.uid;
-          m.value = 0;
-          m.latencyMs = runtimeConfigService.get().getClaimDurationMs();
-          room.estimationAnswers.put(p.uid, m);
-        }
+    for (PlayerState p : room.players) {
+      if (!p.isEliminated && p.online && !room.estimationAnswers.containsKey(p.uid)) {
+        AnswerMetric m = new AnswerMetric();
+        m.uid = p.uid;
+        m.value = 0;
+        m.latencyMs = runtimeConfigService.get().getClaimDurationMs();
+        room.estimationAnswers.put(p.uid, m);
       }
     }
     List<ClaimingPhaseService.Metric> rows = new ArrayList<>();
