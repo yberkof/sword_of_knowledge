@@ -10,6 +10,8 @@ public class ProfileResponse {
   private final String title;
   private final int level;
   private final int xp;
+  private final int xpInLevel;
+  private final int nextLevelXp;
   private final int gold;
   private final int gems;
   private final String avatar;
@@ -25,6 +27,8 @@ public class ProfileResponse {
       String title,
       int level,
       int xp,
+      int xpInLevel,
+      int nextLevelXp,
       int gold,
       int gems,
       String avatar,
@@ -38,6 +42,8 @@ public class ProfileResponse {
     this.title = title;
     this.level = level;
     this.xp = xp;
+    this.xpInLevel = xpInLevel;
+    this.nextLevelXp = nextLevelXp;
     this.gold = gold;
     this.gems = gems;
     this.avatar = avatar;
@@ -53,6 +59,8 @@ public class ProfileResponse {
   public String getTitle() { return title; }
   public int getLevel() { return level; }
   public int getXp() { return xp; }
+  public int getXpInLevel() { return xpInLevel; }
+  public int getNextLevelXp() { return nextLevelXp; }
   public int getGold() { return gold; }
   public int getGems() { return gems; }
   public String getAvatar() { return avatar; }

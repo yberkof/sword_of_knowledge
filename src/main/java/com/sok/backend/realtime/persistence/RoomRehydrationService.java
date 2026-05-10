@@ -10,6 +10,7 @@ import com.sok.backend.realtime.TieBreakMinigameScheduler;
 import com.sok.backend.persistence.ActiveRoomRepository;
 import com.sok.backend.persistence.ActiveRoomRow;
 import com.sok.backend.realtime.match.BattleOrchestrator;
+import com.sok.backend.realtime.match.DuelService;
 import com.sok.backend.realtime.match.ClaimPhaseOrchestrator;
 import com.sok.backend.realtime.match.DuelState;
 import com.sok.backend.realtime.match.PlayerState;
@@ -52,6 +53,7 @@ public class RoomRehydrationService {
   private final RoomTimerScheduler roomTimers;
   private final RoomExecutorRegistry executors;
   private final BattleOrchestrator battleOrchestrator;
+  private final DuelService duelService;
   private final ClaimPhaseOrchestrator claimPhaseOrchestrator;
   private final RoomLifecycle roomLifecycle;
   private final RoomBroadcaster broadcaster;
@@ -68,6 +70,7 @@ public class RoomRehydrationService {
       RoomTimerScheduler roomTimers,
       RoomExecutorRegistry executors,
       BattleOrchestrator battleOrchestrator,
+      DuelService duelService,
       ClaimPhaseOrchestrator claimPhaseOrchestrator,
       RoomLifecycle roomLifecycle,
       RoomBroadcaster broadcaster,
@@ -82,6 +85,7 @@ public class RoomRehydrationService {
     this.roomTimers = roomTimers;
     this.executors = executors;
     this.battleOrchestrator = battleOrchestrator;
+    this.duelService = duelService;
     this.claimPhaseOrchestrator = claimPhaseOrchestrator;
     this.roomLifecycle = roomLifecycle;
     this.broadcaster = broadcaster;
@@ -204,7 +208,7 @@ public class RoomRehydrationService {
         submitRoom(
             room.id,
             () -> {
-              battleOrchestrator.autoFillDuel(room.activeDuel, cfg.getDuelDurationMs());
+              duelService.autoFillDuel(room.activeDuel);
               battleOrchestrator.resolveDuel(socketServer, room);
             });
       } else {
@@ -216,7 +220,7 @@ public class RoomRehydrationService {
                 submitRoom(
                     room.id,
                     () -> {
-                      battleOrchestrator.autoFillDuel(room.activeDuel, cfg.getDuelDurationMs());
+                      duelService.autoFillDuel(room.activeDuel);
                       battleOrchestrator.resolveDuel(socketServer, room);
                     }));
       }
@@ -299,7 +303,7 @@ public class RoomRehydrationService {
                 if (!"collection".equals(d.tiebreakKind) || !"pick".equals(d.collectionSubPhase)) {
                   return;
                 }
-                TieBreakerRealtimeBridge bridge = battleOrchestrator.tieBreakerBridge(socketServer, ro);
+                TieBreakerRealtimeBridge bridge = duelService.tieBreakerBridge(socketServer, ro);
                 collectionTieBreakService.onPickDeadline(d, bridge);
                 broadcaster.emitRoomUpdate(ro);
               });
@@ -320,7 +324,7 @@ public class RoomRehydrationService {
                           return;
                         }
                         TieBreakerRealtimeBridge bridge =
-                            battleOrchestrator.tieBreakerBridge(socketServer, ro);
+                            duelService.tieBreakerBridge(socketServer, ro);
                         collectionTieBreakService.onPickDeadline(d, bridge);
                         broadcaster.emitRoomUpdate(ro);
                       }));

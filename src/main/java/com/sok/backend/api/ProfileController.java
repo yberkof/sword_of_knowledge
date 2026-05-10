@@ -4,6 +4,7 @@ import com.sok.backend.api.dto.ProfileCreateRequest;
 import com.sok.backend.api.dto.ProfilePatchRequest;
 import com.sok.backend.api.dto.ProfileResponse;
 import com.sok.backend.security.SecurityUtils;
+import com.sok.backend.service.AiSessionSummaryService;
 import com.sok.backend.service.ProfileService;
 import java.util.Collections;
 import java.util.Optional;
@@ -20,9 +21,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/profile")
 public class ProfileController {
   private final ProfileService profileService;
+  private final AiSessionSummaryService summaryService;
 
-  public ProfileController(ProfileService profileService) {
+  public ProfileController(ProfileService profileService, AiSessionSummaryService summaryService) {
     this.profileService = profileService;
+    this.summaryService = summaryService;
   }
 
   @GetMapping
@@ -53,5 +56,12 @@ public class ProfileController {
           .body(Collections.singletonMap("error", "Not found"));
     }
     return ResponseEntity.ok(out.get());
+  }
+
+  @GetMapping("/summary")
+  public ResponseEntity<?> getSummary() {
+    String uid = SecurityUtils.currentUid();
+    String summary = summaryService.getOrGenerateSummary(uid);
+    return ResponseEntity.ok(Collections.singletonMap("summary", summary));
   }
 }

@@ -51,6 +51,38 @@ public class NumericQuestionRepository {
     return rows.stream().findFirst();
   }
 
+  public Optional<NumericQuestionRecord> findRandomActiveByCategoryForUser(String category, String userId) {
+    if (category == null || category.trim().isEmpty()) {
+      return Optional.empty();
+    }
+    List<NumericQuestionRecord> rows =
+        jdbcTemplate.query(
+            "SELECT id, text, correct_answer, category FROM "
+                + SCH
+                + ".numeric_questions q WHERE is_active = TRUE AND category = ? "
+                + "AND NOT EXISTS (SELECT 1 FROM " + SCH + ".user_question_history h "
+                + "WHERE h.user_id = ? AND h.question_id = q.id::text AND h.question_type = 'NUMERIC') "
+                + "ORDER BY random() LIMIT 1",
+            numericMapper(),
+            category.trim(),
+            userId);
+    return rows.stream().findFirst();
+  }
+
+  public Optional<NumericQuestionRecord> findRandomActiveAnyForUser(String userId) {
+    List<NumericQuestionRecord> rows =
+        jdbcTemplate.query(
+            "SELECT id, text, correct_answer, category FROM "
+                + SCH
+                + ".numeric_questions q WHERE is_active = TRUE "
+                + "AND NOT EXISTS (SELECT 1 FROM " + SCH + ".user_question_history h "
+                + "WHERE h.user_id = ? AND h.question_id = q.id::text AND h.question_type = 'NUMERIC') "
+                + "ORDER BY random() LIMIT 1",
+            numericMapper(),
+            userId);
+    return rows.stream().findFirst();
+  }
+
   private RowMapper<NumericQuestionRecord> numericMapper() {
     return (ResultSet rs, int rowNum) -> mapRow(rs);
   }

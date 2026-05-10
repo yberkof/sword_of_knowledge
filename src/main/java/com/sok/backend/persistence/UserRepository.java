@@ -104,6 +104,15 @@ public class UserRepository {
         avatar);
   }
 
+  public Optional<Integer> findTrophiesByUid(String uid) {
+    List<Integer> rows =
+        jdbcTemplate.query(
+            "SELECT trophies FROM " + SCH + ".users WHERE id = ?",
+            (rs, rowNum) -> rs.getInt("trophies"),
+            uid);
+    return rows.stream().findFirst();
+  }
+
   public void touchLogin(String uid) {
     jdbcTemplate.update(
         "UPDATE "

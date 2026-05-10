@@ -9,6 +9,7 @@ import com.sok.backend.realtime.room.RoomRulesResolver;
 import com.sok.backend.service.ProgressionService;
 import com.sok.backend.service.config.GameRuntimeConfig;
 import com.sok.backend.service.config.RuntimeGameConfigService;
+import com.sok.backend.persistence.MatchHistoryRepository;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -32,6 +33,7 @@ public class MatchOutcomeService {
   private final RoomLifecycle lifecycle;
   private final RoomRulesResolver rulesResolver;
   private final RoomSnapshotCoordinator snapshotCoordinator;
+  private final MatchHistoryRepository matchHistoryRepository;
 
   public MatchOutcomeService(
       RuntimeGameConfigService runtimeConfigService,
@@ -40,7 +42,8 @@ public class MatchOutcomeService {
       RoomClientSnapshotFactory snapshotFactory,
       RoomLifecycle lifecycle,
       RoomRulesResolver rulesResolver,
-      RoomSnapshotCoordinator snapshotCoordinator) {
+      RoomSnapshotCoordinator snapshotCoordinator,
+      MatchHistoryRepository matchHistoryRepository) {
     this.runtimeConfigService = runtimeConfigService;
     this.resolutionPhaseService = resolutionPhaseService;
     this.progressionService = progressionService;
@@ -48,11 +51,12 @@ public class MatchOutcomeService {
     this.lifecycle = lifecycle;
     this.rulesResolver = rulesResolver;
     this.snapshotCoordinator = snapshotCoordinator;
+    this.matchHistoryRepository = matchHistoryRepository;
   }
 
   public void evaluateEndConditions(SocketIOServer server, RoomState room) {
-    if (PHASE_ENDED.equals(room.phase)) return;
-    if (PHASE_WAITING.equals(room.phase)) return;
+    if (room.isEnded()) return;
+    if (room.isWaiting()) return;
     List<PlayerState> alive = new ArrayList<>();
     for (PlayerState p : room.players) {
       if (!p.isEliminated) alive.add(p);
@@ -81,6 +85,12 @@ public class MatchOutcomeService {
 
   public void finishGame(SocketIOServer server, RoomState room, String winnerUid, String reason) {
     room.phase = PHASE_ENDED;
+    room.rematchVotes.clear();
+    PlayerState winner = room.getPlayer(winnerUid);
+    if (winner != null) {
+      winner.rematchWins++;
+    }
+
     HashMap<String, Object> payload = new HashMap<>();
     payload.put("winnerUid", winnerUid);
     payload.put("reason", reason);
@@ -89,14 +99,26 @@ public class MatchOutcomeService {
     payload.put("room", snapshotFactory.roomToClient(room));
     server.getRoomOperations(room.id).sendEvent("game_ended", payload);
     snapshotCoordinator.removeRoom(room.id);
-    int place = 1;
+
+    List<MatchHistoryRepository.ParticipantResult> historyResults = new ArrayList<>();
+    String matchId = room.id + ":" + room.matchStartedAt;
+
     for (Map<String, Object> row : ranks) {
       String uid = String.valueOf(row.get("uid"));
-      int p = row.get("place") instanceof Number ? ((Number) row.get("place")).intValue() : place;
-      progressionService.grantMatchResult(uid, p, room.id + ":" + room.matchStartedAt);
-      place++;
+      int p = row.get("place") instanceof Number ? ((Number) row.get("place")).intValue() : 1;
+      ProgressionService.MatchProgressionResult res =
+          progressionService.grantMatchResult(uid, p, matchId);
+
+      PlayerState player = room.playersByUid.get(uid);
+      int score = player != null ? player.score : 0;
+      historyResults.add(
+          new MatchHistoryRepository.ParticipantResult(
+              uid, p, score, res.xpDelta(), res.trophiesDelta()));
     }
-    lifecycle.scheduleRoomShutdown(room.id, runtimeConfigService.get().getReconnectGraceSeconds());
+
+    matchHistoryRepository.saveMatchResult(matchId, room.mapId, room.matchMode, historyResults);
+
+    lifecycle.scheduleRoomShutdown(room, runtimeConfigService.get().getReconnectGraceSeconds());
   }
 
   public String topScorer(RoomState room) {

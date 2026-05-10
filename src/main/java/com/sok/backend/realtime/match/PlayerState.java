@@ -21,4 +21,20 @@ public class PlayerState {
   public long lastSeenAt;
   public int trophies;
   public Long eliminatedAt;
+  public int rematchWins;
+
+  public void eliminate() {
+    this.isEliminated = true;
+    this.eliminatedAt = System.currentTimeMillis();
+  }
+
+  public void damageCastle() {
+    if (this.castleHp > 0) {
+      this.castleHp--;
+    }
+  }
+
+  public boolean isDead() {
+    return this.castleHp <= 0;
+  }
 }

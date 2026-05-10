@@ -108,7 +108,7 @@ public class NewPlayerRoomJoinService {
     matchmakingAllocator.updateSoloPublicIndexAfterJoin(room);
     broadcaster.emitRoomUpdate(room);
     if (room.players.size() >= requiredPlayersToStart(room, cfg) && PHASE_WAITING.equals(room.phase)) {
-      castlePlacement.startCastlePlacementPhase(server, room);
+      castlePlacement.startCastlePlacementPhase(room);
     }
   }
 }

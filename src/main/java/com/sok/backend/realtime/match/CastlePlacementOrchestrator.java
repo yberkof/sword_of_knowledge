@@ -25,6 +25,7 @@ public class CastlePlacementOrchestrator {
   private final RoomRulesResolver rulesResolver;
   private final MatchmakingAllocator matchmakingAllocator;
   private final RoomSnapshotCoordinator snapshotCoordinator;
+  private final MatchInitializer matchInitializer;
 
   public CastlePlacementOrchestrator(
       RuntimeGameConfigService runtimeConfigService,
@@ -32,37 +33,20 @@ public class CastlePlacementOrchestrator {
       RoomBroadcaster broadcaster,
       RoomRulesResolver rulesResolver,
       MatchmakingAllocator matchmakingAllocator,
-      RoomSnapshotCoordinator snapshotCoordinator) {
+      RoomSnapshotCoordinator snapshotCoordinator,
+      MatchInitializer matchInitializer) {
     this.runtimeConfigService = runtimeConfigService;
     this.castlePlacementPhaseService = castlePlacementPhaseService;
     this.broadcaster = broadcaster;
     this.rulesResolver = rulesResolver;
     this.matchmakingAllocator = matchmakingAllocator;
     this.snapshotCoordinator = snapshotCoordinator;
+    this.matchInitializer = matchInitializer;
   }
 
-  public void startCastlePlacementPhase(SocketIOServer server, RoomState room) {
-    matchmakingAllocator.clearIndexesForRoom(room);
-    GameRuntimeConfig cfg = runtimeConfigService.get();
-    rulesResolver.configureTeamsForMatch(room);
+  public void startCastlePlacementPhase(RoomState room) {
     room.phase = PHASE_CASTLE;
-    room.round = 1;
-    room.currentTurnIndex = 0;
-    room.matchStartedAt = System.currentTimeMillis();
-    room.lastActivityAt = room.matchStartedAt;
-    room.scoreByUid.clear();
-    for (PlayerState p : room.players) {
-      p.castleHp = cfg.getInitialCastleHp();
-      p.castleRegionId = null;
-      p.isEliminated = false;
-      p.score = 0;
-      room.scoreByUid.put(p.uid, 0);
-    }
-    HashMap<String, Object> payload = new HashMap<>();
-    payload.put("phase", PHASE_CASTLE);
-    payload.put("initialCastleHp", cfg.getInitialCastleHp());
-    server.getRoomOperations(room.id).sendEvent("phase_changed", payload);
-    broadcaster.emitRoomUpdate(room);
+    matchInitializer.initializeMatchState(room);
     snapshotCoordinator.snapshotDurable(room);
   }
 

@@ -30,7 +30,6 @@ public class MatchmakingAllocator {
 
   private final Object matchmakingLock = new Object();
   private final ConcurrentHashMap<String, String> waitingInviteToRoomId = new ConcurrentHashMap<>();
-  private volatile String soloPublicWaitingRoomId;
 
   public MatchmakingAllocator(
       RoomStore store,
@@ -49,7 +48,7 @@ public class MatchmakingAllocator {
    * Resolve an existing waiting room or create a new one. Returns {@code null} when the server is
    * at its {@code maxRooms} capacity.
    */
-  public Allocation findOrCreateRoomAllocation(String normalizedInvite) {
+  public Allocation findOrCreateRoomAllocation(String normalizedInvite, int playerTrophies) {
     GameRuntimeConfig cfg = runtimeConfigService.get();
     synchronized (matchmakingLock) {
       if (scale.getMaxRooms() > 0 && store.size() >= scale.getMaxRooms()) {
@@ -69,48 +68,51 @@ public class MatchmakingAllocator {
         }
         String id = store.newRoomId();
         RoomState room = newWaitingRoom(cfg, id, normalizedInvite);
+        room.targetTrophies = playerTrophies;
         store.put(id, room);
         waitingInviteToRoomId.put(normalizedInvite, id);
         touchRoomRegistry(id);
         return new Allocation(id, true);
       }
 
-      // Public queue: include the indexed room even when players.size() == 0 — the first member is
-      // added asynchronously (submitToRoom), so requiring size == 1 caused a second client to clear
-      // soloPublicWaitingRoomId and open a duplicate waiting room.
-      if (soloPublicWaitingRoomId != null) {
-        RoomState solo = store.get(soloPublicWaitingRoomId);
-        if (solo != null
-            && PHASE_WAITING.equals(solo.phase)
-            && solo.inviteCode == null
-            && solo.players.size() < cfg.getMaxPlayers()) {
-          return new Allocation(soloPublicWaitingRoomId, false);
-        }
-        soloPublicWaitingRoomId = null;
-      }
-
+      long now = System.currentTimeMillis();
       RoomState bestPublicWaiting = null;
+      int bestTrophyDiff = Integer.MAX_VALUE;
+
       for (RoomState room : store.values()) {
         if (PHASE_WAITING.equals(room.phase)
             && room.inviteCode == null
-            && room.players.size() < cfg.getMaxPlayers()
-            && (bestPublicWaiting == null
-                || room.players.size() > bestPublicWaiting.players.size())) {
-          bestPublicWaiting = room;
+            && room.players.size() < cfg.getMaxPlayers()) {
+
+          int diff = Math.abs(room.targetTrophies - playerTrophies);
+          int allowedDiff = calculateAllowedTrophyDiff(room.createdAt, now);
+
+          if (diff <= allowedDiff) {
+            if (bestPublicWaiting == null || diff < bestTrophyDiff) {
+              bestPublicWaiting = room;
+              bestTrophyDiff = diff;
+            }
+          }
         }
       }
+
       if (bestPublicWaiting != null) {
-        soloPublicWaitingRoomId = bestPublicWaiting.id;
         return new Allocation(bestPublicWaiting.id, false);
       }
 
       String id = store.newRoomId();
       RoomState room = newWaitingRoom(cfg, id, null);
+      room.targetTrophies = playerTrophies;
       store.put(id, room);
-      soloPublicWaitingRoomId = id;
       touchRoomRegistry(id);
       return new Allocation(id, true);
     }
+  }
+
+  private int calculateAllowedTrophyDiff(long roomCreatedAt, long now) {
+    long secondsWaiting = (now - roomCreatedAt) / 1000;
+    // Start at 50, expand by 25 every 5 seconds
+    return 50 + (int) (secondsWaiting / 5) * 25;
   }
 
   /** If a brand-new-empty allocation never received its first player, tear the room down. */
@@ -123,17 +125,7 @@ public class MatchmakingAllocator {
   }
 
   public void updateSoloPublicIndexAfterJoin(RoomState room) {
-    if (room.inviteCode != null) {
-      return;
-    }
-    synchronized (matchmakingLock) {
-      if (soloPublicWaitingRoomId != null && soloPublicWaitingRoomId.equals(room.id)) {
-        GameRuntimeConfig cfg = runtimeConfigService.get();
-        if (room.players.size() >= cfg.getMaxPlayers()) {
-          soloPublicWaitingRoomId = null;
-        }
-      }
-    }
+    // Legacy soloPublicWaitingRoomId logic removed for trophy-based matching
   }
 
   public void clearIndexesForRoom(RoomState room) {
@@ -144,9 +136,6 @@ public class MatchmakingAllocator {
       if (room.inviteCode != null) {
         waitingInviteToRoomId.remove(room.inviteCode, room.id);
       }
-      if (room.id.equals(soloPublicWaitingRoomId)) {
-        soloPublicWaitingRoomId = null;
-      }
     }
   }
 
@@ -155,9 +144,7 @@ public class MatchmakingAllocator {
    * Used by {@link com.sok.backend.realtime.room.RoomLifecycle} on player removal.
    */
   public void markAsSoloPublicWaiting(String roomId) {
-    synchronized (matchmakingLock) {
-      soloPublicWaitingRoomId = roomId;
-    }
+    // Legacy soloPublicWaitingRoomId logic removed for trophy-based matching
   }
 
   private RoomState newWaitingRoom(GameRuntimeConfig cfg, String id, String inviteCode) {

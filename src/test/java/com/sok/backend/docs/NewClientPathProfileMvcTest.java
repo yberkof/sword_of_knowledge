@@ -70,6 +70,8 @@ class NewClientPathProfileMvcTest {
             0,
             0,
             0,
+            0,
+            0,
             "",
             "",
             0,

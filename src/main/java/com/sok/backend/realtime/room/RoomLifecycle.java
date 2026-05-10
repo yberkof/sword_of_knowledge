@@ -4,6 +4,7 @@ import com.sok.backend.realtime.RoomRegistryService;
 import com.sok.backend.realtime.persistence.RoomSnapshotCoordinator;
 import com.sok.backend.realtime.match.PlayerState;
 import com.sok.backend.realtime.match.RoomState;
+import com.sok.backend.realtime.match.RematchService;
 import com.sok.backend.realtime.matchmaking.MatchmakingAllocator;
 import com.sok.backend.service.config.RuntimeGameConfigService;
 import java.util.ArrayList;
@@ -29,6 +30,7 @@ public class RoomLifecycle {
   private final RuntimeGameConfigService runtimeConfigService;
   private final ObjectProvider<RoomRegistryService> roomRegistry;
   private final RoomSnapshotCoordinator snapshotCoordinator;
+  private final ObjectProvider<RematchService> rematchService;
 
   public RoomLifecycle(
       RoomStore store,
@@ -38,7 +40,8 @@ public class RoomLifecycle {
       MatchmakingAllocator matchmakingAllocator,
       RuntimeGameConfigService runtimeConfigService,
       ObjectProvider<RoomRegistryService> roomRegistry,
-      RoomSnapshotCoordinator snapshotCoordinator) {
+      RoomSnapshotCoordinator snapshotCoordinator,
+      ObjectProvider<RematchService> rematchService) {
     this.store = store;
     this.roomExecutors = roomExecutors;
     this.roomTimers = roomTimers;
@@ -47,6 +50,7 @@ public class RoomLifecycle {
     this.runtimeConfigService = runtimeConfigService;
     this.roomRegistry = roomRegistry;
     this.snapshotCoordinator = snapshotCoordinator;
+    this.rematchService = rematchService;
   }
 
   public void removePlayerFromRoom(RoomState room, String uid) {
@@ -55,6 +59,7 @@ public class RoomLifecycle {
       return;
     }
     store.unmapUid(uid);
+    room.rematchVotes.remove(uid);
     List<PlayerState> next = new ArrayList<>();
     for (PlayerState p : room.players) {
       if (!uid.equals(p.uid)) {
@@ -66,6 +71,14 @@ public class RoomLifecycle {
       shutdownRoom(room.id);
       return;
     }
+
+    if ("ended".equals(room.phase)) {
+      RematchService service = rematchService.getIfAvailable();
+      if (service != null) {
+        service.processRematchVote(room, null);
+      }
+    }
+
     room.hostUid = room.players.get(0).uid;
     if (room.players.size() == 1
         && PHASE_WAITING.equals(room.phase)
@@ -93,8 +106,9 @@ public class RoomLifecycle {
     for (String uid : toRemove) removePlayerFromRoom(room, uid);
   }
 
-  public void scheduleRoomShutdown(String roomId, int seconds) {
-    roomTimers.schedule(() -> shutdownRoom(roomId), seconds, TimeUnit.SECONDS);
+  public void scheduleRoomShutdown(RoomState room, int seconds) {
+    roomTimers.scheduleTimer(
+        room, "room_shutdown", seconds * 1000L, () -> shutdownRoom(room.id));
   }
 
   public void shutdownRoom(String roomId) {

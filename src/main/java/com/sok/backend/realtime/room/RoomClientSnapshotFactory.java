@@ -34,6 +34,7 @@ public class RoomClientSnapshotFactory {
     payload.put("scoreByUid", room.scoreByUid);
     payload.put("claimTurnUid", room.claimTurnUid);
     payload.put("claimPicksLeftByUid", room.claimPicksLeftByUid);
+    payload.put("rematchVotes", room.rematchVotes);
     if (room.activeDuel != null) {
       HashMap<String, Object> duel = new HashMap<>();
       duel.put("attackerUid", room.activeDuel.attackerUid);
@@ -74,6 +75,7 @@ public class RoomClientSnapshotFactory {
       row.put("castleRegionId", p.castleRegionId);
       row.put("online", p.online);
       row.put("teamId", p.teamId);
+      row.put("rematchWins", p.rematchWins);
       out.add(row);
     }
     return out;

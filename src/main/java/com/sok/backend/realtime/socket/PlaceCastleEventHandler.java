@@ -2,6 +2,7 @@ package com.sok.backend.realtime.socket;
 
 import com.corundumstudio.socketio.SocketIOServer;
 import com.sok.backend.realtime.match.BattleOrchestrator;
+import com.sok.backend.realtime.match.BattleStateService;
 import com.sok.backend.realtime.match.CastleAutoPlacementService;
 import com.sok.backend.realtime.match.CastlePlacementOrchestrator;
 import com.sok.backend.realtime.match.ClaimPhaseOrchestrator;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Component;
 public class PlaceCastleEventHandler {
 
   private final BattleOrchestrator battle;
+  private final BattleStateService battleState;
   private final CastlePlacementOrchestrator castlePlacement;
   private final ClaimPhaseOrchestrator claimPhase;
   private final RoomClientSnapshotFactory snapshotFactory;
@@ -27,12 +29,14 @@ public class PlaceCastleEventHandler {
 
   public PlaceCastleEventHandler(
       BattleOrchestrator battle,
+      BattleStateService battleState,
       CastlePlacementOrchestrator castlePlacement,
       ClaimPhaseOrchestrator claimPhase,
       RoomClientSnapshotFactory snapshotFactory,
       CastleAutoPlacementService castleAutoPlacement,
       RoomBroadcaster broadcaster) {
     this.battle = battle;
+    this.battleState = battleState;
     this.castlePlacement = castlePlacement;
     this.claimPhase = claimPhase;
     this.snapshotFactory = snapshotFactory;
@@ -66,12 +70,12 @@ public class PlaceCastleEventHandler {
     p.castleRegionId = regionId;
     p.score += snapshotFactory.pointValue(room, regionId);
     room.scoreByUid.put(uid, p.score);
-    battle.advanceTurnSkipEliminated(room);
+    battleState.advanceTurnSkipEliminated(room);
     broadcaster.emitRoomUpdate(room);
     if (castlePlacement.allPlayersPlacedCastle(room)) {
       claimPhase.startClaimingQuestionRound(server, room);
     } else {
-      castleAutoPlacement.tryAutoPlaceIfSingleRemaining(room, battle);
+      castleAutoPlacement.tryAutoPlaceIfSingleRemaining(room, battleState);
       if (castlePlacement.allPlayersPlacedCastle(room)) {
         claimPhase.startClaimingQuestionRound(server, room);
       }

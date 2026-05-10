@@ -4,6 +4,8 @@ import com.sok.backend.persistence.NumericQuestionRecord;
 import com.sok.backend.persistence.NumericQuestionRepository;
 import com.sok.backend.persistence.QuestionRecord;
 import com.sok.backend.persistence.QuestionRepository;
+import com.sok.backend.persistence.UserQuestionHistoryRepository;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -16,11 +18,15 @@ import org.springframework.stereotype.Service;
 public class QuestionEngineService {
   private final QuestionRepository questionRepository;
   private final NumericQuestionRepository numericQuestionRepository;
+  private final UserQuestionHistoryRepository historyRepository;
 
   public QuestionEngineService(
-      QuestionRepository questionRepository, NumericQuestionRepository numericQuestionRepository) {
+      QuestionRepository questionRepository,
+      NumericQuestionRepository numericQuestionRepository,
+      UserQuestionHistoryRepository historyRepository) {
     this.questionRepository = questionRepository;
     this.numericQuestionRepository = numericQuestionRepository;
+    this.historyRepository = historyRepository;
   }
 
   public static class NumericQuestion {
@@ -41,9 +47,16 @@ public class QuestionEngineService {
    * Estimation question for claiming rounds and numeric tie-breakers. Loads from {@code
    * sword_of_knowledge.numeric_questions}; falls back to built-in samples when empty.
    */
-  public NumericQuestion nextNumericQuestion(String category) {
-    Optional<NumericQuestionRecord> row =
-        numericQuestionRepository.findRandomActiveByCategory(category);
+  public NumericQuestion nextNumericQuestion(String category, List<String> excludeUserIds) {
+    Optional<NumericQuestionRecord> row = Optional.empty();
+    if (excludeUserIds != null && !excludeUserIds.isEmpty()) {
+      row =
+          numericQuestionRepository.findRandomActiveByCategoryForUser(
+              category, excludeUserIds.get(0));
+    }
+    if (row.isEmpty()) {
+      row = numericQuestionRepository.findRandomActiveByCategory(category);
+    }
     if (row.isEmpty()) {
       row = numericQuestionRepository.findRandomActiveAny();
     }
@@ -51,6 +64,10 @@ public class QuestionEngineService {
       return fromNumericRecord(row.get());
     }
     return nextNumericQuestionFallback();
+  }
+
+  public NumericQuestion nextNumericQuestion(String category) {
+    return nextNumericQuestion(category, null);
   }
 
   private static boolean isValidNumeric(NumericQuestionRecord r) {
@@ -88,9 +105,14 @@ public class QuestionEngineService {
    * Loads a random MCQ from {@code sword_of_knowledge.questions}. Falls back to built-in samples
    * only when the table has no usable rows.
    */
-  public McqQuestion nextMcqQuestion(String category) {
-    Optional<QuestionRecord> row =
-        questionRepository.findRandomActiveByCategory(category);
+  public McqQuestion nextMcqQuestion(String category, List<String> excludeUserIds) {
+    Optional<QuestionRecord> row = Optional.empty();
+    if (excludeUserIds != null && !excludeUserIds.isEmpty()) {
+      row = questionRepository.findRandomActiveByCategoryForUser(category, excludeUserIds.get(0));
+    }
+    if (row.isEmpty()) {
+      row = questionRepository.findRandomActiveByCategory(category);
+    }
     if (row.isEmpty()) {
       row = questionRepository.findRandomActiveAny();
     }
@@ -98,6 +120,18 @@ public class QuestionEngineService {
       return fromRecord(row.get());
     }
     return nextMcqQuestionFallback();
+  }
+
+  public McqQuestion nextMcqQuestion(String category) {
+    return nextMcqQuestion(category, null);
+  }
+
+  public void recordQuestionSeen(List<String> userIds, String questionId, String type) {
+    if (userIds == null || questionId == null || type == null) return;
+    for (String uid : userIds) {
+      if ("neutral".equals(uid)) continue;
+      historyRepository.recordQuestion(uid, questionId, type);
+    }
   }
 
   private static boolean isValidMcq(QuestionRecord r) {

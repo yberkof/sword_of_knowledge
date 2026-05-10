@@ -9,6 +9,7 @@ import com.sok.backend.domain.game.tiebreaker.TieBreakerRealtimeBridge;
 import com.sok.backend.realtime.RoundLastSubmitEmitter;
 import com.sok.backend.realtime.TieBreakMinigameScheduler;
 import com.sok.backend.realtime.match.BattleOrchestrator;
+import com.sok.backend.realtime.match.DuelService;
 import com.sok.backend.realtime.match.DuelState;
 import com.sok.backend.realtime.match.RoomState;
 import com.sok.backend.realtime.persistence.RoomSnapshotCoordinator;
@@ -26,6 +27,7 @@ public class TiebreakRestEventHandler {
   private final MemoryTieBreakInteractionService memoryTieBreakInteractionService;
   private final TieBreakMinigameScheduler tieBreakMinigameScheduler;
   private final BattleOrchestrator battle;
+  private final DuelService duelService;
   private final RoomBroadcaster broadcaster;
   private final RoomSnapshotCoordinator snapshotCoordinator;
   private final RoomTimerScheduler roomTimers;
@@ -38,6 +40,7 @@ public class TiebreakRestEventHandler {
       MemoryTieBreakInteractionService memoryTieBreakInteractionService,
       TieBreakMinigameScheduler tieBreakMinigameScheduler,
       BattleOrchestrator battle,
+      DuelService duelService,
       RoomBroadcaster broadcaster,
       RoomSnapshotCoordinator snapshotCoordinator,
       RoomTimerScheduler roomTimers,
@@ -48,6 +51,7 @@ public class TiebreakRestEventHandler {
     this.memoryTieBreakInteractionService = memoryTieBreakInteractionService;
     this.tieBreakMinigameScheduler = tieBreakMinigameScheduler;
     this.battle = battle;
+    this.duelService = duelService;
     this.broadcaster = broadcaster;
     this.snapshotCoordinator = snapshotCoordinator;
     this.roomTimers = roomTimers;
@@ -60,7 +64,7 @@ public class TiebreakRestEventHandler {
       return;
     }
     DuelState duel = room.activeDuel;
-    TieBreakerRealtimeBridge bridge = battle.tieBreakerBridge(server, room);
+    TieBreakerRealtimeBridge bridge = duelService.tieBreakerBridge(server, room);
     collectionTieBreakService.submitPick(duel, uid, choice, bridge);
     roundLastSubmitEmitter.emit(
         server, room, "tiebreak_collection", null, false, "collection_pick", uid);
@@ -84,7 +88,7 @@ public class TiebreakRestEventHandler {
       return;
     }
     DuelState duel = room.activeDuel;
-    TieBreakerRealtimeBridge bridge = battle.tieBreakerBridge(server, room);
+    TieBreakerRealtimeBridge bridge = duelService.tieBreakerBridge(server, room);
     RhythmTieBreakInteractionService.MoveOutcome mo =
         rhythmTieBreakInteractionService.submitReplay(duel, uid, inputs, bridge);
     roomTimers.cancelTimer(room, TieBreakMinigameScheduler.RHYTHM_ROUND_TIMER_KEY);

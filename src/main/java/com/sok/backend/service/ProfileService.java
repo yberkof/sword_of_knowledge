@@ -16,10 +16,15 @@ import org.springframework.stereotype.Service;
 public class ProfileService {
   private final UserRepository userRepository;
   private final ObjectMapper objectMapper;
+  private final ProgressionService progressionService;
 
-  public ProfileService(UserRepository userRepository, ObjectMapper objectMapper) {
+  public ProfileService(
+      UserRepository userRepository,
+      ObjectMapper objectMapper,
+      ProgressionService progressionService) {
     this.userRepository = userRepository;
     this.objectMapper = objectMapper;
+    this.progressionService = progressionService;
   }
 
   public Optional<ProfileResponse> getProfile(String uid) {
@@ -85,6 +90,8 @@ public class ProfileService {
   }
 
   private ProfileResponse toResponse(UserRecord row) {
+    int xpInLevel = progressionService.xpInCurrentLevel(row.xp());
+    int nextLevelXp = progressionService.nextLevelXpRequirement(row.level());
     return new ProfileResponse(
         row.id(),
         row.displayName(),
@@ -93,6 +100,8 @@ public class ProfileService {
         row.title(),
         row.level(),
         row.xp(),
+        xpInLevel,
+        nextLevelXp,
         row.gold(),
         row.gems(),
         row.avatarUrl(),

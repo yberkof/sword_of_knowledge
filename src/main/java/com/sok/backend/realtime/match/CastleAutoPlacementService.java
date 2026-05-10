@@ -34,7 +34,7 @@ public class CastleAutoPlacementService {
     this.broadcaster = broadcaster;
   }
 
-  public void tryAutoPlaceIfSingleRemaining(RoomState room, BattleOrchestrator battle) {
+  public void tryAutoPlaceIfSingleRemaining(RoomState room, BattleStateService battleState) {
     if (room == null || !PHASE_CASTLE.equals(room.phase)) return;
     GameRuntimeConfig cfgSnap = runtimeConfigService.get();
     if (!cfgSnap.isAutoPlaceLastUnplacedCastle()) return;
@@ -50,7 +50,7 @@ public class CastleAutoPlacementService {
     pending.castleRegionId = regionId;
     pending.score += snapshotFactory.pointValue(room, regionId);
     room.scoreByUid.put(pending.uid, pending.score);
-    battle.advanceTurnSkipEliminated(room);
+    battleState.advanceTurnSkipEliminated(room);
     broadcaster.emitRoomUpdate(room);
   }
 

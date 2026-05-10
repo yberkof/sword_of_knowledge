@@ -27,7 +27,10 @@ public class NumericClosestTieBreakerAttackPhaseStrategy implements TieBreakerAt
     duel.tiebreakKind = "numeric";
     GameRuntimeConfig cfg = b.configuration();
     duel.numericQuestion =
-        b.questionEngine().nextNumericQuestion(cfg.getDefaultQuestionCategory());
+        b.questionEngine()
+            .nextNumericQuestion(
+                cfg.getDefaultQuestionCategory(),
+                java.util.Arrays.asList(duel.attackerUid, duel.defenderUid));
     Map<String, Object> payload =
         b.questionEngine()
             .toClient(duel.numericQuestion, ctx.phaseStartedAtMs(), cfg.getTiebreakDurationMs());

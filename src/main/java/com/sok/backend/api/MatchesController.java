@@ -1,6 +1,7 @@
 package com.sok.backend.api;
 
 import com.sok.backend.persistence.ActiveRoomRepository;
+import com.sok.backend.persistence.MatchHistoryRepository;
 import com.sok.backend.realtime.match.RoomState;
 import com.sok.backend.realtime.persistence.RoomRehydrationService;
 import com.sok.backend.realtime.room.RoomStore;
@@ -9,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -22,14 +24,17 @@ public class MatchesController {
   private final RoomStore roomStore;
   private final ActiveRoomRepository activeRoomRepository;
   private final RoomRehydrationService rehydrationService;
+  private final MatchHistoryRepository matchHistoryRepository;
 
   public MatchesController(
       RoomStore roomStore,
       ActiveRoomRepository activeRoomRepository,
-      RoomRehydrationService rehydrationService) {
+      RoomRehydrationService rehydrationService,
+      MatchHistoryRepository matchHistoryRepository) {
     this.roomStore = roomStore;
     this.activeRoomRepository = activeRoomRepository;
     this.rehydrationService = rehydrationService;
+    this.matchHistoryRepository = matchHistoryRepository;
   }
 
   @GetMapping("/active")
@@ -55,6 +60,13 @@ public class MatchesController {
     }
     return ResponseEntity.ok(
         new ActiveMatchResponse(room.id, room.phase, room.mapId == null ? "" : room.mapId));
+  }
+
+  @GetMapping("/history")
+  public ResponseEntity<?> getHistory(
+      @RequestParam(defaultValue = "10") int limit, @RequestParam(defaultValue = "0") int offset) {
+    String uid = SecurityUtils.currentUid();
+    return ResponseEntity.ok(matchHistoryRepository.getMatchHistory(uid, limit, offset));
   }
 
   public record ActiveMatchResponse(String matchId, String phase, String mapId) {}

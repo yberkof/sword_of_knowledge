@@ -11,65 +11,30 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
- * Castle placement, claim, attack, and duel answer/estimation (moved from {@code SocketGateway}).
+ * Binds battle-phase events like attacking and duel answer submission.
  */
 @Component
-public class GameplaySocketEventBinder implements SocketEventBinder {
-  private static final Logger log = LoggerFactory.getLogger(GameplaySocketEventBinder.class);
+public class BattleSocketEventBinder implements SocketEventBinder {
+  private static final Logger log = LoggerFactory.getLogger(BattleSocketEventBinder.class);
 
   private final RoomSerialCommandService roomCommands;
-  private final PlaceCastleEventHandler placeCastle;
-  private final ClaimRegionEventHandler claimRegion;
   private final AttackEventHandler attack;
-  private final SubmitEstimationEventHandler submitEst;
   private final SubmitDuelAnswerEventHandler submitDuel;
   private final GameInputRules gameInputRules;
 
-  public GameplaySocketEventBinder(
+  public BattleSocketEventBinder(
       RoomSerialCommandService roomCommands,
-      PlaceCastleEventHandler placeCastle,
-      ClaimRegionEventHandler claimRegion,
       AttackEventHandler attack,
-      SubmitEstimationEventHandler submitEst,
       SubmitDuelAnswerEventHandler submitDuel,
       GameInputRules gameInputRules) {
     this.roomCommands = roomCommands;
-    this.placeCastle = placeCastle;
-    this.claimRegion = claimRegion;
     this.attack = attack;
-    this.submitEst = submitEst;
     this.submitDuel = submitDuel;
     this.gameInputRules = gameInputRules;
   }
 
   @Override
   public void bind(SocketIOServer server) {
-    server.addEventListener(
-        "place_castle",
-        JsonNode.class,
-        (client, payload, ack) -> {
-          SocketEventPayloads.validateUidOrDisconnect(client, payload);
-          String roomId = SocketEventPayloads.asString(payload, "roomId");
-          String uid = SocketEventPayloads.asString(payload, "uid");
-          int regionId = payload.path("regionId").asInt(-1);
-          roomCommands.runWithServer(
-              roomId,
-              server,
-              (s, room) -> placeCastle.onPlace(roomId, uid, regionId, s, room));
-        });
-    server.addEventListener(
-        "claim_region",
-        JsonNode.class,
-        (client, payload, ack) -> {
-          SocketEventPayloads.validateUidOrDisconnect(client, payload);
-          String roomId = SocketEventPayloads.asString(payload, "roomId");
-          String uid = SocketEventPayloads.asString(payload, "uid");
-          int regionId = payload.path("regionId").asInt(-1);
-          roomCommands.runWithServer(
-              roomId,
-              server,
-              (s, room) -> claimRegion.onClaim(client, s, roomId, uid, regionId, room));
-        });
     server.addEventListener(
         "attack",
         JsonNode.class,
@@ -83,19 +48,7 @@ public class GameplaySocketEventBinder implements SocketEventBinder {
               server,
               (s, room) -> attack.onAttack(client, s, roomId, attackerUid, targetHexId, room));
         });
-    server.addEventListener(
-        "submit_estimation",
-        JsonNode.class,
-        (client, payload, ack) -> {
-          SocketEventPayloads.validateUidOrDisconnect(client, payload);
-          String roomId = SocketEventPayloads.asString(payload, "roomId");
-          String uid = SocketEventPayloads.asString(payload, "uid");
-          int value = payload.path("value").asInt(Integer.MIN_VALUE);
-          roomCommands.runWithServer(
-              roomId,
-              server,
-              (s, room) -> submitEst.onSubmit(roomId, uid, value, s, room));
-        });
+
     server.addEventListener(
         "submit_answer",
         JsonNode.class,

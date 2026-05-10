@@ -6,6 +6,7 @@ import com.sok.backend.domain.game.tiebreaker.RhythmTieBreakInteractionService;
 import com.sok.backend.domain.game.tiebreaker.RpsTieBreakInteractionService;
 import com.sok.backend.domain.game.tiebreaker.TieBreakerRealtimeBridge;
 import com.sok.backend.realtime.match.BattleOrchestrator;
+import com.sok.backend.realtime.match.DuelService;
 import com.sok.backend.realtime.match.DuelState;
 import com.sok.backend.realtime.match.RoomState;
 import com.sok.backend.realtime.RoundLastSubmitEmitter;
@@ -35,6 +36,7 @@ public class TieBreakMinigameScheduler {
   private final RoomExecutorRegistry executors;
   private final RoomTimerScheduler roomTimers;
   private final BattleOrchestrator battleOrchestrator;
+  private final DuelService duelService;
   private final RhythmTieBreakInteractionService rhythmService;
   private final MemoryTieBreakInteractionService memoryService;
   private final RoomBroadcaster broadcaster;
@@ -47,6 +49,7 @@ public class TieBreakMinigameScheduler {
       RoomExecutorRegistry executors,
       RoomTimerScheduler roomTimers,
       BattleOrchestrator battleOrchestrator,
+      DuelService duelService,
       RhythmTieBreakInteractionService rhythmService,
       MemoryTieBreakInteractionService memoryService,
       RoomBroadcaster broadcaster,
@@ -57,6 +60,7 @@ public class TieBreakMinigameScheduler {
     this.executors = executors;
     this.roomTimers = roomTimers;
     this.battleOrchestrator = battleOrchestrator;
+    this.duelService = duelService;
     this.rhythmService = rhythmService;
     this.memoryService = memoryService;
     this.broadcaster = broadcaster;
@@ -115,7 +119,7 @@ public class TieBreakMinigameScheduler {
     if (room == null || room.activeDuel == null) return;
     DuelState duel = room.activeDuel;
     if (!"rhythm".equals(duel.tiebreakKind)) return;
-    TieBreakerRealtimeBridge bridge = battleOrchestrator.tieBreakerBridge(socketServer, room);
+    TieBreakerRealtimeBridge bridge = duelService.tieBreakerBridge(socketServer, room);
     RhythmTieBreakInteractionService.MoveOutcome mo =
         rhythmService.forceEvaluateIfReady(duel, bridge);
     applyRhythmOutcome(socketServer, room, mo);
@@ -126,7 +130,7 @@ public class TieBreakMinigameScheduler {
     if (room == null || room.activeDuel == null) return;
     DuelState duel = room.activeDuel;
     if (!"memory".equals(duel.tiebreakKind)) return;
-    TieBreakerRealtimeBridge bridge = battleOrchestrator.tieBreakerBridge(socketServer, room);
+    TieBreakerRealtimeBridge bridge = duelService.tieBreakerBridge(socketServer, room);
     memoryService.endPeekStartPlay(duel, bridge);
     broadcaster.emitRoomUpdate(room);
     snapshotCoordinator.snapshotDurable(room);

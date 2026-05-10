@@ -60,6 +60,44 @@ public class QuestionRepository {
     return rows.stream().findFirst();
   }
 
+  /**
+   * Random active question in the given category, excluding those the user has already seen.
+   */
+  public Optional<QuestionRecord> findRandomActiveByCategoryForUser(String category, String userId) {
+    if (category == null || category.trim().isEmpty()) {
+      return Optional.empty();
+    }
+    List<QuestionRecord> rows =
+        jdbcTemplate.query(
+            "SELECT id, text, options, correct_index, category FROM "
+                + SCH
+                + ".questions q WHERE is_active = TRUE AND category = ? "
+                + "AND NOT EXISTS (SELECT 1 FROM " + SCH + ".user_question_history h "
+                + "WHERE h.user_id = ? AND h.question_id = q.id::text AND h.question_type = 'MCQ') "
+                + "ORDER BY random() LIMIT 1",
+            questionMapper(),
+            category.trim(),
+            userId);
+    return rows.stream().findFirst();
+  }
+
+  /**
+   * Any random active question, excluding seen ones.
+   */
+  public Optional<QuestionRecord> findRandomActiveAnyForUser(String userId) {
+    List<QuestionRecord> rows =
+        jdbcTemplate.query(
+            "SELECT id, text, options, correct_index, category FROM "
+                + SCH
+                + ".questions q WHERE is_active = TRUE "
+                + "AND NOT EXISTS (SELECT 1 FROM " + SCH + ".user_question_history h "
+                + "WHERE h.user_id = ? AND h.question_id = q.id::text AND h.question_type = 'MCQ') "
+                + "ORDER BY random() LIMIT 1",
+            questionMapper(),
+            userId);
+    return rows.stream().findFirst();
+  }
+
   private RowMapper<QuestionRecord> questionMapper() {
     return (ResultSet rs, int rowNum) -> mapRow(rs);
   }

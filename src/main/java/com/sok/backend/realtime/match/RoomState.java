@@ -36,6 +36,7 @@ public class RoomState {
   public int currentTurnIndex = 0;
   public String hostUid;
   public String inviteCode;
+  public int targetTrophies;
   public int round = 1;
   public int roundAttackCount = 0;
   public DuelState activeDuel;
@@ -54,4 +55,29 @@ public class RoomState {
   public int mcqSpeedTieRetries;
   /** When non-null, forces the next tie-break resolution path (e.g. numeric after mcq_retry exhaustion). */
   public String tieBreakOverride;
+  public Map<String, Boolean> rematchVotes = new HashMap<String, Boolean>();
+
+  public PlayerState getPlayer(String uid) {
+    return playersByUid.get(uid);
+  }
+
+  public RegionState getRegion(int id) {
+    return regions.get(id);
+  }
+
+  public boolean isEnded() {
+    return PHASE_ENDED.equals(phase);
+  }
+
+  public boolean isWaiting() {
+    return PHASE_WAITING.equals(phase);
+  }
+
+  public void updateScore(String uid, int newScore) {
+    PlayerState p = getPlayer(uid);
+    if (p != null) {
+      p.score = newScore;
+      scoreByUid.put(uid, newScore);
+    }
+  }
 }

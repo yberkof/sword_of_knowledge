@@ -14,6 +14,7 @@ import com.sok.backend.realtime.room.RoomLifecycle;
 import com.sok.backend.realtime.socket.match.MatchJoinRollbackService;
 import com.sok.backend.realtime.socket.match.MatchRejoinService;
 import com.sok.backend.realtime.socket.match.NewPlayerRoomJoinService;
+import com.sok.backend.persistence.UserRepository;
 import com.sok.backend.service.config.GameRuntimeConfig;
 import com.sok.backend.service.config.RuntimeGameConfigService;
 import org.springframework.stereotype.Component;
@@ -38,6 +39,7 @@ public class MatchmakingSocketEventBinder implements SocketEventBinder {
   private final RuntimeGameConfigService runtimeConfigService;
   private final RoomRulesResolver rulesResolver;
   private final CastlePlacementOrchestrator castlePlacement;
+  private final UserRepository userRepository;
 
   public MatchmakingSocketEventBinder(
       GameInputRules gameInputRules,
@@ -50,7 +52,8 @@ public class MatchmakingSocketEventBinder implements SocketEventBinder {
       RoomLifecycle lifecycle,
       RuntimeGameConfigService runtimeConfigService,
       RoomRulesResolver rulesResolver,
-      CastlePlacementOrchestrator castlePlacement) {
+      CastlePlacementOrchestrator castlePlacement,
+      UserRepository userRepository) {
     this.gameInputRules = gameInputRules;
     this.newPlayerRoomJoin = newPlayerRoomJoin;
     this.matchRejoinService = matchRejoinService;
@@ -62,6 +65,7 @@ public class MatchmakingSocketEventBinder implements SocketEventBinder {
     this.runtimeConfigService = runtimeConfigService;
     this.rulesResolver = rulesResolver;
     this.castlePlacement = castlePlacement;
+    this.userRepository = userRepository;
   }
 
   @Override
@@ -120,8 +124,9 @@ public class MatchmakingSocketEventBinder implements SocketEventBinder {
       client.sendEvent("join_rejected", mapOf("reason", "server_full"));
       return;
     }
+    int trophies = userRepository.findTrophiesByUid(uid).orElse(0);
     MatchmakingAllocator.Allocation allocation =
-        matchmakingAllocator.findOrCreateRoomAllocation(normalized);
+        matchmakingAllocator.findOrCreateRoomAllocation(normalized, trophies);
     if (allocation == null) {
       client.sendEvent("join_rejected", mapOf("reason", "capacity"));
       return;
@@ -181,7 +186,7 @@ public class MatchmakingSocketEventBinder implements SocketEventBinder {
               || room.players.size() > cfg.getMaxPlayers()) {
             return;
           }
-          castlePlacement.startCastlePlacementPhase(s, room);
+          castlePlacement.startCastlePlacementPhase(room);
         });
   }
 }
