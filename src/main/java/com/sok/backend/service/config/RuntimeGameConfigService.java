@@ -10,7 +10,7 @@ public class RuntimeGameConfigService {
   private final GameRuntimeConfigRepository repository;
   private final ObjectMapper objectMapper;
   private final AtomicReference<GameRuntimeConfig> cache =
-      new AtomicReference<GameRuntimeConfig>(GameRuntimeConfig.withDefaults());
+      new AtomicReference<GameRuntimeConfig>(GameRuntimeConfigFactory.withDefaults());
 
   public RuntimeGameConfigService(GameRuntimeConfigRepository repository, ObjectMapper objectMapper) {
     this.repository = repository;
@@ -36,7 +36,7 @@ public class RuntimeGameConfigService {
   @Scheduled(fixedDelayString = "${app.game-config-refresh-ms:5000}")
   public void refresh() {
     // Temporarily bypass database load to prioritize GameRuntimeConfig.java defaults
-    cache.set(GameRuntimeConfig.withDefaults());
+    cache.set(GameRuntimeConfigFactory.withDefaults());
 
     /*
     try {
@@ -48,7 +48,7 @@ public class RuntimeGameConfigService {
                   new java.util.function.Supplier<GameRuntimeConfig>() {
                     @Override
                     public GameRuntimeConfig get() {
-                      return GameRuntimeConfig.withDefaults();
+                      return GameRuntimeConfigFactory.withDefaults();
                     }
                   });
       validate(next);
@@ -63,7 +63,7 @@ public class RuntimeGameConfigService {
     try {
       return objectMapper.readValue(raw, GameRuntimeConfig.class);
     } catch (Exception ex) {
-      return GameRuntimeConfig.withDefaults();
+      return GameRuntimeConfigFactory.withDefaults();
     }
   }
 

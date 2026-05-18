@@ -39,7 +39,7 @@ public class LocalJwtAuthFilter extends OncePerRequestFilter {
     }
     try {
       String token = authHeader.substring(7);
-      LocalJwtService.LocalClaims claims = authTokenService.verifyAccessToken(token);
+      LocalClaims claims = authTokenService.verifyAccessToken(token);
       AuthenticatedUser principal = new AuthenticatedUser(claims.userId());
       UsernamePasswordAuthenticationToken auth =
           new UsernamePasswordAuthenticationToken(principal, null, Collections.emptyList());

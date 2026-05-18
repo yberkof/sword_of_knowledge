@@ -1,13 +1,6 @@
 server:
   port: ${PORT:8080}
 
-logging:
-  level:
-    # Realtime duel / claiming — INFO is always visible with default Spring Boot logback.
-    com.sok.backend.realtime.SocketGateway: INFO
-    com.sok.backend.realtime.SocketIoConfig: INFO
-    com.corundumstudio.socketio: WARN
-
 spring:
   application:
     name: spring-backend
@@ -41,19 +34,6 @@ management:
 app:
   instance:
     id: ${APP_INSTANCE_ID:local-1}
-  integration:
-    redis:
-      enabled: ${REDIS_ENABLED:false}
-      url: ${REDIS_URL:redis://localhost:6379/0}
-  realtime:
-    max-rooms: ${REALTIME_MAX_ROOMS:10000}
-    max-online-players: ${REALTIME_MAX_ONLINE_PLAYERS:12000}
-    room-task-queue-capacity: ${REALTIME_ROOM_QUEUE:50000}
-    room-worker-core-threads: ${REALTIME_WORKER_CORE:32}
-    room-worker-max-threads: ${REALTIME_WORKER_MAX:256}
-    record-room-task-latency: ${REALTIME_RECORD_LATENCY:true}
-    snapshot-to-redis: ${REALTIME_SNAPSHOT_REDIS:true}
-    snapshot-interval-ms: ${REALTIME_SNAPSHOT_INTERVAL_MS:15000}
   auth:
     issuer: ${AUTH_ISSUER:sok-local-auth}
     jwt-secret: ${AUTH_JWT_SECRET:dev_change_me_local_jwt_secret_32_chars_min}
@@ -72,7 +52,6 @@ app:
   firebase:
     project-id: ${FIREBASE_PROJECT_ID:gen-lang-client-0938666448}
   socket:
-    enabled: ${SOCKET_ENABLED:true}
     host: ${SOCKET_HOST:0.0.0.0}
     port: ${SOCKET_PORT:8081}
     allow-insecure: ${ALLOW_INSECURE_SOCKET:false}

@@ -4,6 +4,7 @@ import com.sok.backend.api.UnauthorizedException;
 import com.sok.backend.persistence.AuthSessionRecord;
 import com.sok.backend.persistence.AuthSessionRepository;
 import com.sok.backend.persistence.UserRepository;
+import com.sok.backend.security.LocalClaims;
 import com.sok.backend.security.LocalJwtService;
 import com.sok.backend.security.RefreshTokenHasher;
 import java.time.Instant;
@@ -35,7 +36,7 @@ public class AuthTokenService {
     UUID sid = UUID.randomUUID();
     String refreshToken = localJwtService.issueRefreshToken(userId, sid);
     String refreshHash = refreshTokenHasher.sha256(refreshToken);
-    LocalJwtService.LocalClaims refreshClaims = localJwtService.verifyRefreshToken(refreshToken);
+    LocalClaims refreshClaims = localJwtService.verifyRefreshToken(refreshToken);
     AuthSessionRecord row =
         authSessionRepository.create(
             sid,
@@ -50,7 +51,7 @@ public class AuthTokenService {
   }
 
   public TokenPair rotateRefreshToken(String refreshToken, String deviceInfo, String ip) {
-    LocalJwtService.LocalClaims claims;
+    LocalClaims claims;
     try {
       claims = localJwtService.verifyRefreshToken(refreshToken);
     } catch (IllegalStateException ex) {
@@ -70,7 +71,7 @@ public class AuthTokenService {
 
     String nextRefresh = localJwtService.issueRefreshToken(claims.userId(), claims.sessionId());
     String nextHash = refreshTokenHasher.sha256(nextRefresh);
-    LocalJwtService.LocalClaims nextClaims = localJwtService.verifyRefreshToken(nextRefresh);
+    LocalClaims nextClaims = localJwtService.verifyRefreshToken(nextRefresh);
     int updated =
         authSessionRepository.rotate(
             claims.sessionId(),
@@ -82,7 +83,7 @@ public class AuthTokenService {
   }
 
   public void revokeByRefreshToken(String refreshToken) {
-    LocalJwtService.LocalClaims claims;
+    LocalClaims claims;
     try {
       claims = localJwtService.verifyRefreshToken(refreshToken);
     } catch (IllegalStateException ex) {
@@ -91,7 +92,7 @@ public class AuthTokenService {
     authSessionRepository.revokeById(claims.sessionId());
   }
 
-  public LocalJwtService.LocalClaims verifyAccessToken(String accessToken) {
+  public LocalClaims verifyAccessToken(String accessToken) {
     return localJwtService.verifyAccessToken(accessToken);
   }
 

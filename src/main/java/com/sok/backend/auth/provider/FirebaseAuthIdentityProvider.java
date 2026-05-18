@@ -6,7 +6,7 @@ import com.sok.backend.auth.identity.AuthIdentityProvider;
 import com.sok.backend.persistence.UserIdentityLinkRepository;
 import com.sok.backend.persistence.UserRepository;
 import com.sok.backend.security.FirebaseGoogleIdentityTokenVerifier;
-import com.sok.backend.security.FirebaseGoogleIdentityTokenVerifier.VerifiedToken;
+import com.sok.backend.security.VerifiedToken;
 import com.sok.backend.service.AuthTokenService;
 import java.util.Optional;
 import org.springframework.core.annotation.Order;

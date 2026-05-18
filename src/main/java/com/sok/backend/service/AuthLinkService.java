@@ -3,7 +3,7 @@ package com.sok.backend.service;
 import com.sok.backend.auth.provider.FirebaseAuthIdentityProvider;
 import com.sok.backend.persistence.UserIdentityLinkRepository;
 import com.sok.backend.security.FirebaseGoogleIdentityTokenVerifier;
-import com.sok.backend.security.FirebaseGoogleIdentityTokenVerifier.VerifiedToken;
+import com.sok.backend.security.VerifiedToken;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
 
